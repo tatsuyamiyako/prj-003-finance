@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Expense, ExpenseCategory, Member, Project } from "@/lib/types";
 
 type Props = {
@@ -17,39 +18,101 @@ export function ExpenseForm({
   expense,
   action,
 }: Props) {
+  const [recurring, setRecurring] = useState(false);
+  const isEdit = !!expense;
+  const settlementMembers = members.filter((m) => m.is_settlement_participant);
+  const allIds = settlementMembers.map((m) => m.id);
+  const initialSplitIds = expense?.split_member_ids ?? allIds;
+  const [splitIds, setSplitIds] = useState<string[]>(initialSplitIds);
+  const allSelected = splitIds.length === settlementMembers.length;
+
   return (
     <form action={action} className="max-w-xl space-y-4">
       {expense && <input type="hidden" name="id" value={expense.id} />}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700">
-            日付
-          </label>
+      {!isEdit && (
+        <label className="flex items-center gap-2 text-sm text-slate-700">
           <input
-            type="date"
-            name="incurred_on"
-            required
-            defaultValue={expense?.incurred_on ?? new Date().toISOString().slice(0, 10)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900"
+            type="checkbox"
+            checked={recurring}
+            onChange={(e) => setRecurring(e.target.checked)}
+            className="rounded border-slate-300"
           />
-        </div>
+          定期入力（月を指定して一括登録）
+        </label>
+      )}
 
+      {recurring && !isEdit ? (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              開始月
+            </label>
+            <input
+              type="month"
+              name="month_from"
+              required
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              終了月
+            </label>
+            <input
+              type="month"
+              name="month_to"
+              required
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              日付
+            </label>
+            <input
+              type="date"
+              name="incurred_on"
+              required={!recurring}
+              defaultValue={expense?.incurred_on ?? new Date().toISOString().slice(0, 10)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              金額
+            </label>
+            <input
+              type="number"
+              name="amount"
+              required
+              min={0}
+              defaultValue={expense?.amount ?? ""}
+              placeholder="10000"
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900"
+            />
+          </div>
+        </div>
+      )}
+
+      {recurring && !isEdit && (
         <div>
           <label className="block text-sm font-medium text-slate-700">
-            金額
+            月額
           </label>
           <input
             type="number"
             name="amount"
             required
             min={0}
-            defaultValue={expense?.amount ?? ""}
-            placeholder="10000"
+            placeholder="2000"
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900"
           />
         </div>
-      </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-slate-700">
@@ -100,7 +163,7 @@ export function ExpenseForm({
           name="description"
           required
           defaultValue={expense?.description ?? ""}
-          placeholder="高納商店　シャツ"
+          placeholder="Claude Pro / Canva Pro 等"
           className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900"
         />
       </div>
@@ -125,6 +188,40 @@ export function ExpenseForm({
 
       <div>
         <label className="block text-sm font-medium text-slate-700">
+          割り勘対象
+        </label>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+          <label className="flex items-center gap-1.5 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={() => setSplitIds(allSelected ? [] : allIds)}
+              className="rounded border-slate-300"
+            />
+            全員
+          </label>
+          {settlementMembers.map((m) => (
+            <label key={m.id} className="flex items-center gap-1.5 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                name="split_member_ids"
+                value={m.id}
+                checked={splitIds.includes(m.id)}
+                onChange={(e) =>
+                  setSplitIds((prev) =>
+                    e.target.checked ? [...prev, m.id] : prev.filter((id) => id !== m.id),
+                  )
+                }
+                className="rounded border-slate-300"
+              />
+              {m.name}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700">
           備考
         </label>
         <textarea
@@ -139,7 +236,7 @@ export function ExpenseForm({
         type="submit"
         className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
       >
-        {expense ? "更新" : "登録"}
+        {isEdit ? "更新" : recurring ? "一括登録" : "登録"}
       </button>
     </form>
   );

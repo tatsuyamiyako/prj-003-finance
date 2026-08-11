@@ -8,6 +8,7 @@ const NAV = [
   { href: "/projects", label: "案件管理" },
   { href: "/expenses", label: "経費入力" },
   { href: "/settlements", label: "立替精算" },
+  { href: "/revenue-split", label: "個人別売上" },
 ] as const;
 
 export default async function DashboardLayout({

@@ -1,23 +1,47 @@
 "use client";
 
-import type { Business, Project } from "@/lib/types";
+import { useState } from "react";
+import type { Business, Member, Project } from "@/lib/types";
 import { PROJECT_STATUSES, INVOICE_STATUSES, PAYMENT_STATUSES } from "@/lib/types";
 
 type Props = {
   businesses: Business[];
+  members: Member[];
   project?: Project;
   action: (formData: FormData) => Promise<void>;
 };
 
-export function ProjectForm({ businesses, project, action }: Props) {
+export function ProjectForm({ businesses, members, project, action }: Props) {
+  const settlementMembers = members.filter((m) => m.is_settlement_participant);
+  const allIds = settlementMembers.map((m) => m.id);
+  const initialSplitIds = project?.split_member_ids ?? allIds;
+  const [splitIds, setSplitIds] = useState<string[]>(initialSplitIds);
+  const allSelected = splitIds.length === settlementMembers.length;
   return (
     <form action={action} className="max-w-2xl space-y-4">
       {project && <input type="hidden" name="id" value={project.id} />}
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="案件コード" name="code" required defaultValue={project?.code} placeholder="PRJ-001" />
+        <div>
+          <label className="block text-sm font-medium text-slate-700">案件コード</label>
+          <div className="mt-1 flex items-center rounded-md border border-slate-300 focus-within:border-slate-900">
+            <span className="select-none pl-3 text-sm text-slate-500">PRJ-</span>
+            <input
+              type="text"
+              name="code_number"
+              required
+              inputMode="numeric"
+              pattern="[0-9]+"
+              defaultValue={project?.code?.replace(/^PRJ-/, "") ?? ""}
+              placeholder="001"
+              className="w-full rounded-r-md border-0 px-1 py-2 text-sm text-slate-900 outline-none"
+            />
+          </div>
+        </div>
         <Field label="クライアント名" name="client_name" required defaultValue={project?.client_name} />
       </div>
+
+      <Field label="案件名" name="name" defaultValue={project?.name ?? ""} placeholder="LP制作 / SNS運用 等" />
 
       <div>
         <label className="block text-sm font-medium text-slate-700">事業</label>
@@ -51,6 +75,40 @@ export function ProjectForm({ businesses, project, action }: Props) {
         <SelectField label="ステータス" name="status" options={PROJECT_STATUSES} defaultValue={project?.status ?? "won"} />
         <SelectField label="請求書" name="invoice_status" options={INVOICE_STATUSES} defaultValue={project?.invoice_status ?? "not_sent"} />
         <SelectField label="着金" name="payment_status" options={PAYMENT_STATUSES} defaultValue={project?.payment_status ?? "unpaid"} />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700">
+          割り勘対象
+        </label>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+          <label className="flex items-center gap-1.5 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={() => setSplitIds(allSelected ? [] : allIds)}
+              className="rounded border-slate-300"
+            />
+            全員
+          </label>
+          {settlementMembers.map((m) => (
+            <label key={m.id} className="flex items-center gap-1.5 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                name="split_member_ids"
+                value={m.id}
+                checked={splitIds.includes(m.id)}
+                onChange={(e) =>
+                  setSplitIds((prev) =>
+                    e.target.checked ? [...prev, m.id] : prev.filter((id) => id !== m.id),
+                  )
+                }
+                className="rounded border-slate-300"
+              />
+              {m.name}
+            </label>
+          ))}
+        </div>
       </div>
 
       <Field label="ネクストアクション" name="next_action" defaultValue={project?.next_action ?? ""} />

@@ -43,6 +43,7 @@ export type Member = {
 export type Project = {
   id: string;
   code: string;
+  name: string | null;
   client_name: string;
   business_id: string | null;
   summary: string | null;
@@ -55,6 +56,7 @@ export type Project = {
   payment_status: PaymentStatus;
   next_action: string | null;
   notes: string | null;
+  split_member_ids: string[] | null;
   needs_review: boolean;
 };
 
@@ -66,6 +68,7 @@ export type Expense = {
   description: string;
   amount: number;
   paid_by_member_id: string | null;
+  split_member_ids: string[] | null;
   notes: string | null;
   needs_review: boolean;
 };
@@ -73,6 +76,7 @@ export type Expense = {
 export type ProjectProfit = {
   project_id: string;
   code: string;
+  project_name: string | null;
   client_name: string;
   business_name: string | null;
   status: ProjectStatus;
@@ -85,6 +89,23 @@ export type ProjectProfit = {
 
 export function statusLabel(value: ProjectStatus) {
   return PROJECT_STATUSES.find((s) => s.value === value)?.label ?? value;
+}
+
+export function statusBadgeClass(value: ProjectStatus) {
+  switch (value) {
+    case "lost":
+      return "bg-slate-100 text-slate-500";
+    case "won":
+      return "bg-blue-50 text-blue-700";
+    case "in_progress":
+      return "bg-amber-50 text-amber-700";
+    case "delivered":
+      return "bg-violet-50 text-violet-700";
+    case "paid":
+      return "bg-emerald-50 text-emerald-700";
+    default:
+      return "bg-slate-100 text-slate-600";
+  }
 }
 
 export function formatYen(value: number | null | undefined) {

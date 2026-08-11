@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatYen } from "@/lib/types";
+import { toggleSettlement } from "./actions";
 
 type BalanceRow = {
   month: string;
@@ -77,15 +78,22 @@ export default async function SettlementsPage() {
                         {formatYen(r.balance)}
                       </td>
                       <td className="px-3 py-2">
-                        <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-xs ${
-                            r.is_settled
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          {r.is_settled ? "精算済" : "未精算"}
-                        </span>
+                        <form action={toggleSettlement} className="inline">
+                          <input type="hidden" name="month" value={r.month} />
+                          <input type="hidden" name="member_id" value={r.member_id} />
+                          <input type="hidden" name="is_settled" value={String(r.is_settled)} />
+                          <input type="hidden" name="balance" value={String(r.balance)} />
+                          <button
+                            type="submit"
+                            className={`inline-block rounded-full px-2 py-0.5 text-xs cursor-pointer hover:opacity-80 ${
+                              r.is_settled
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {r.is_settled ? "精算済" : "未精算"}
+                          </button>
+                        </form>
                       </td>
                     </tr>
                   ))}

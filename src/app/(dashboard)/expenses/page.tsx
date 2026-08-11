@@ -3,14 +3,35 @@ import { createClient } from "@/lib/supabase/server";
 import { formatYen } from "@/lib/types";
 import { deleteExpense } from "./actions";
 
-export default async function ExpensesPage() {
+function nextMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return m === 12
+    ? `${y + 1}-01-01`
+    : `${y}-${String(m + 1).padStart(2, "0")}-01`;
+}
+
+export default async function ExpensesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const { month } = await searchParams;
   const supabase = await createClient();
-  const { data: expenses } = await supabase
+
+  let query = supabase
     .from("expenses")
     .select(
       "*, project:projects(code, client_name), category:expense_categories(name), paid_by:members(name)",
     )
     .order("incurred_on", { ascending: false });
+
+  if (month) {
+    query = query
+      .gte("incurred_on", `${month}-01`)
+      .lt("incurred_on", nextMonth(month));
+  }
+
+  const { data: expenses } = await query;
 
   return (
     <div>
@@ -23,6 +44,32 @@ export default async function ExpensesPage() {
           経費を追加
         </Link>
       </div>
+
+      <form className="mt-4 flex items-end gap-3">
+        <div>
+          <label className="block text-xs font-medium text-slate-500">月で絞り込み</label>
+          <input
+            type="month"
+            name="month"
+            defaultValue={month ?? ""}
+            className="mt-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-slate-900"
+          />
+        </div>
+        <button
+          type="submit"
+          className="rounded-md bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-600"
+        >
+          絞り込む
+        </button>
+        {month && (
+          <Link
+            href="/expenses"
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            クリア
+          </Link>
+        )}
+      </form>
 
       <div className="mt-4 overflow-x-auto">
         <table className="min-w-full text-sm">

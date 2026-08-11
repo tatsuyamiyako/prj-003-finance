@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProjectForm } from "../project-form";
 import { updateProject } from "../actions";
-import type { Business, Project } from "@/lib/types";
+import type { Business, Member, Project } from "@/lib/types";
 
 export default async function EditProjectPage(
   props: { params: Promise<{ id: string }> },
@@ -10,10 +10,12 @@ export default async function EditProjectPage(
   const { id } = await props.params;
   const supabase = await createClient();
 
-  const [{ data: project }, { data: businesses }] = await Promise.all([
-    supabase.from("projects").select("*").eq("id", id).single(),
-    supabase.from("businesses").select("*").order("sort_order"),
-  ]);
+  const [{ data: project }, { data: businesses }, { data: members }] =
+    await Promise.all([
+      supabase.from("projects").select("*").eq("id", id).single(),
+      supabase.from("businesses").select("*").order("sort_order"),
+      supabase.from("members").select("*").eq("is_active", true).order("name"),
+    ]);
 
   if (!project) notFound();
 
@@ -23,6 +25,7 @@ export default async function EditProjectPage(
       <div className="mt-4">
         <ProjectForm
           businesses={(businesses ?? []) as Business[]}
+          members={(members ?? []) as Member[]}
           project={project as Project}
           action={updateProject}
         />
