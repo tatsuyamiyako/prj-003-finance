@@ -1,24 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useActionState } from "react";
 import type { Business, Member, Project } from "@/lib/types";
 import { PROJECT_STATUSES, INVOICE_STATUSES, PAYMENT_STATUSES } from "@/lib/types";
+import type { ActionState } from "./actions";
 
 type Props = {
   businesses: Business[];
   members: Member[];
   project?: Project;
-  action: (formData: FormData) => Promise<void>;
+  nextCodeNumber?: string;
+  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
 };
 
-export function ProjectForm({ businesses, members, project, action }: Props) {
+export function ProjectForm({ businesses, members, project, nextCodeNumber, action }: Props) {
+  const [state, formAction] = useActionState(action, undefined);
   const settlementMembers = members.filter((m) => m.is_settlement_participant);
   const allIds = settlementMembers.map((m) => m.id);
   const initialSplitIds = project?.split_member_ids ?? allIds;
   const [splitIds, setSplitIds] = useState<string[]>(initialSplitIds);
   const allSelected = splitIds.length === settlementMembers.length;
   return (
-    <form action={action} className="max-w-2xl space-y-4">
+    <form action={formAction} className="max-w-2xl space-y-4">
+      {state?.error && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {state.error}
+        </div>
+      )}
       {project && <input type="hidden" name="id" value={project.id} />}
 
       <div className="grid grid-cols-2 gap-4">
@@ -32,7 +40,7 @@ export function ProjectForm({ businesses, members, project, action }: Props) {
               required
               inputMode="numeric"
               pattern="[0-9]+"
-              defaultValue={project?.code?.replace(/^PRJ-/, "") ?? ""}
+              defaultValue={project?.code?.replace(/^PRJ-/, "") ?? nextCodeNumber ?? ""}
               placeholder="001"
               className="w-full rounded-r-md border-0 px-1 py-2 text-sm text-slate-900 outline-none"
             />

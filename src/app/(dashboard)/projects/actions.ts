@@ -9,12 +9,17 @@ function toDate(v: string | null): string | null {
   return v.length === 7 ? `${v}-01` : v;
 }
 
-export async function createProject(formData: FormData) {
+export type ActionState = { error?: string } | undefined;
+
+export async function createProject(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  if (!user) return { error: "ログインしてください" };
 
   const code = `PRJ-${formData.get("code_number") as string}`;
   const splitIds = formData.getAll("split_member_ids") as string[];
@@ -36,17 +41,25 @@ export async function createProject(formData: FormData) {
     notes: (formData.get("notes") as string) || null,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === "23505") {
+      return { error: `案件コード ${code} は既に使われています` };
+    }
+    return { error: error.message };
+  }
   revalidatePath("/projects");
   redirect("/projects");
 }
 
-export async function updateProject(formData: FormData) {
+export async function updateProject(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  if (!user) return { error: "ログインしてください" };
 
   const id = formData.get("id") as string;
   const code = `PRJ-${formData.get("code_number") as string}`;
@@ -72,7 +85,12 @@ export async function updateProject(formData: FormData) {
     })
     .eq("id", id);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === "23505") {
+      return { error: `案件コード ${code} は既に使われています` };
+    }
+    return { error: error.message };
+  }
   revalidatePath("/projects");
   redirect("/projects");
 }
