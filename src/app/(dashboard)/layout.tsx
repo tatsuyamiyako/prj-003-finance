@@ -56,6 +56,9 @@ export default async function DashboardLayout({
                   {m.name}タスク一覧
                 </Link>
               ))}
+              <Link href="/tasks/report" className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200">
+                レポーティング
+              </Link>
             </div>
           </div>
         </nav>

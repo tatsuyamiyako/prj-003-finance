@@ -1,0 +1,357 @@
+import { createClient } from "@/lib/supabase/server";
+import {
+  taskStatusLabel,
+  taskStatusBadgeClass,
+  taskPriorityBadgeClass,
+  type Task,
+  type TaskPriority,
+} from "@/lib/types";
+import Link from "next/link";
+
+type TaskWithRelations = Task & {
+  project: { id: string; code: string; client_name: string; name: string | null } | null;
+  member: { name: string } | null;
+};
+
+export default async function ReportPage() {
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [{ data: tasks }, { data: members }] = await Promise.all([
+    supabase
+      .from("tasks")
+      .select("*, project:projects(id, code, client_name, name), member:members!assigned_to(name)")
+      .order("priority")
+      .order("due_date", { ascending: true, nullsFirst: false }),
+    supabase.from("members").select("id, name").eq("is_active", true).order("name"),
+  ]);
+
+  const allTasks = (tasks ?? []) as unknown as TaskWithRelations[];
+
+  const doneTasks = allTasks.filter((t) => t.status === "done");
+  const inProgressTasks = allTasks.filter((t) => t.status === "in_progress");
+  const todoTasks = allTasks.filter((t) => t.status === "todo");
+  const overdueTasks = allTasks.filter(
+    (t) => t.due_date && t.status !== "done" && t.due_date < today
+  );
+  const dueSoonTasks = allTasks.filter(
+    (t) =>
+      t.due_date &&
+      t.status !== "done" &&
+      t.due_date >= today &&
+      t.due_date <= addDays(today, 3)
+  );
+
+  const recentlyDone = doneTasks.filter(
+    (t) => t.updated_at && t.updated_at.slice(0, 10) === today
+  );
+
+  const nextTasks = [...inProgressTasks, ...todoTasks]
+    .sort((a, b) => {
+      const pa = priorityWeight(a.priority);
+      const pb = priorityWeight(b.priority);
+      if (pa !== pb) return pa - pb;
+      if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      return 0;
+    })
+    .slice(0, 5);
+
+  const totalActive = inProgressTasks.length + todoTasks.length;
+  const totalAll = allTasks.length;
+  const doneRate = totalAll > 0 ? Math.round((doneTasks.length / totalAll) * 100) : 0;
+
+  const memberStats = (members ?? []).map((m) => {
+    const memberTasks = allTasks.filter((t) => t.assigned_to === m.id);
+    const done = memberTasks.filter((t) => t.status === "done").length;
+    const active = memberTasks.filter((t) => t.status !== "done").length;
+    return { name: m.name, total: memberTasks.length, done, active };
+  });
+
+  const aiComments = allTasks
+    .filter((t) => t.ai_comment && t.status !== "done")
+    .map((t) => ({
+      title: t.title,
+      project: t.project ? `${t.project.code} ${t.project.client_name}` : null,
+      comment: t.ai_comment!,
+    }));
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-slate-900">デイリーレポート</h1>
+          <p className="mt-0.5 text-sm text-slate-500">{formatDate(today)}</p>
+        </div>
+        <Link
+          href="/tasks"
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+        >
+          タスク一覧へ
+        </Link>
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard label="全タスク" value={totalAll} />
+        <StatCard label="完了" value={doneTasks.length} sub={`${doneRate}%`} color="emerald" />
+        <StatCard label="進行中" value={inProgressTasks.length} color="amber" />
+        <StatCard label="未着手" value={todoTasks.length} color="slate" />
+      </div>
+
+      {/* Overdue Alert */}
+      {overdueTasks.length > 0 && (
+        <section className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <h2 className="text-sm font-semibold text-red-800">
+            期限超過 ({overdueTasks.length}件)
+          </h2>
+          <div className="mt-2 space-y-1.5">
+            {overdueTasks.map((t) => (
+              <TaskRow key={t.id} task={t} highlight="overdue" />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Due Soon */}
+      {dueSoonTasks.length > 0 && (
+        <section className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h2 className="text-sm font-semibold text-amber-800">
+            3日以内に期限 ({dueSoonTasks.length}件)
+          </h2>
+          <div className="mt-2 space-y-1.5">
+            {dueSoonTasks.map((t) => (
+              <TaskRow key={t.id} task={t} highlight="soon" />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Next Recommended Tasks */}
+      <section>
+        <h2 className="text-sm font-semibold text-slate-900">次にやるべきタスク（優先度順）</h2>
+        <div className="mt-2 space-y-1.5">
+          {nextTasks.length > 0 ? (
+            nextTasks.map((t, i) => (
+              <div key={t.id} className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+                  {i + 1}
+                </span>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskPriorityBadgeClass(t.priority)}`}>
+                  {priorityLabel(t.priority)}
+                </span>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskStatusBadgeClass(t.status)}`}>
+                  {taskStatusLabel(t.status)}
+                </span>
+                <Link href={`/tasks/${t.id}`} className="min-w-0 flex-1 truncate text-sm text-slate-900 hover:underline">
+                  {t.title}
+                </Link>
+                {t.project && (
+                  <span className="shrink-0 text-xs text-slate-400">{t.project.code}</span>
+                )}
+                {t.member && (
+                  <span className="shrink-0 text-xs text-slate-500">{t.member.name}</span>
+                )}
+                {t.due_date && (
+                  <span className="shrink-0 text-xs text-slate-400">{t.due_date}</span>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="py-4 text-center text-sm text-slate-400">残タスクなし</p>
+          )}
+        </div>
+      </section>
+
+      {/* Today's Completed */}
+      <section>
+        <h2 className="text-sm font-semibold text-slate-900">本日完了したタスク</h2>
+        <div className="mt-2">
+          {recentlyDone.length > 0 ? (
+            <div className="space-y-1.5">
+              {recentlyDone.map((t) => (
+                <TaskRow key={t.id} task={t} />
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-md border border-slate-100 bg-slate-50 py-4 text-center text-sm text-slate-400">
+              本日完了したタスクはまだありません
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Member Stats */}
+      <section>
+        <h2 className="text-sm font-semibold text-slate-900">メンバー別タスク状況</h2>
+        <div className="mt-2 overflow-hidden rounded-lg border border-slate-200">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50">
+                <th className="px-4 py-2 text-left font-medium text-slate-600">メンバー</th>
+                <th className="px-4 py-2 text-right font-medium text-slate-600">担当数</th>
+                <th className="px-4 py-2 text-right font-medium text-slate-600">完了</th>
+                <th className="px-4 py-2 text-right font-medium text-slate-600">残り</th>
+                <th className="px-4 py-2 text-left font-medium text-slate-600">進捗</th>
+              </tr>
+            </thead>
+            <tbody>
+              {memberStats.map((m) => {
+                const pct = m.total > 0 ? Math.round((m.done / m.total) * 100) : 0;
+                return (
+                  <tr key={m.name} className="border-b border-slate-100 last:border-b-0">
+                    <td className="px-4 py-2 font-medium text-slate-900">{m.name}</td>
+                    <td className="px-4 py-2 text-right text-slate-600">{m.total}</td>
+                    <td className="px-4 py-2 text-right text-emerald-600">{m.done}</td>
+                    <td className="px-4 py-2 text-right text-slate-600">{m.active}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-full max-w-[100px] rounded-full bg-slate-200">
+                          <div
+                            className="h-1.5 rounded-full bg-emerald-500 transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-slate-500">{pct}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* AI Feedback */}
+      {aiComments.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-slate-900">AI フィードバック</h2>
+          <div className="mt-2 space-y-2">
+            {aiComments.map((c, i) => (
+              <div key={i} className="rounded-md border border-violet-200 bg-violet-50 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-violet-500">AI</span>
+                  <span className="text-xs font-medium text-slate-700">{c.title}</span>
+                  {c.project && (
+                    <span className="text-xs text-slate-400">({c.project})</span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-violet-700">{c.comment}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Remaining Tasks List */}
+      <section>
+        <h2 className="text-sm font-semibold text-slate-900">
+          全残タスク ({totalActive}件)
+        </h2>
+        <div className="mt-2 space-y-1">
+          {[...inProgressTasks, ...todoTasks].map((t) => (
+            <TaskRow key={t.id} task={t} />
+          ))}
+          {totalActive === 0 && (
+            <p className="py-4 text-center text-sm text-slate-400">残タスクなし</p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  sub,
+  color = "slate",
+}: {
+  label: string;
+  value: number;
+  sub?: string;
+  color?: "slate" | "emerald" | "amber";
+}) {
+  const border = {
+    slate: "border-slate-200",
+    emerald: "border-emerald-200",
+    amber: "border-amber-200",
+  }[color];
+  const text = {
+    slate: "text-slate-900",
+    emerald: "text-emerald-600",
+    amber: "text-amber-600",
+  }[color];
+  return (
+    <div className={`rounded-lg border ${border} bg-white px-4 py-3`}>
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className={`text-2xl font-bold ${text}`}>{value}</span>
+        {sub && <span className="text-xs text-slate-400">{sub}</span>}
+      </div>
+    </div>
+  );
+}
+
+function TaskRow({
+  task,
+  highlight,
+}: {
+  task: TaskWithRelations;
+  highlight?: "overdue" | "soon";
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-md bg-white px-3 py-1.5">
+      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskStatusBadgeClass(task.status)}`}>
+        {taskStatusLabel(task.status)}
+      </span>
+      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskPriorityBadgeClass(task.priority)}`}>
+        {priorityLabel(task.priority)}
+      </span>
+      <Link href={`/tasks/${task.id}`} className="min-w-0 flex-1 truncate text-sm text-slate-900 hover:underline">
+        {task.title}
+      </Link>
+      {task.project && (
+        <span className="shrink-0 text-xs text-slate-400">{task.project.code}</span>
+      )}
+      {task.member && (
+        <span className="shrink-0 text-xs text-slate-500">{task.member.name}</span>
+      )}
+      {task.due_date && (
+        <span
+          className={`shrink-0 text-xs ${
+            highlight === "overdue"
+              ? "font-medium text-red-600"
+              : highlight === "soon"
+                ? "font-medium text-amber-600"
+                : "text-slate-400"
+          }`}
+        >
+          {task.due_date}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function priorityWeight(p: TaskPriority) {
+  return p === "high" ? 0 : p === "medium" ? 1 : 2;
+}
+
+function priorityLabel(v: TaskPriority) {
+  return v === "high" ? "高" : v === "medium" ? "中" : "低";
+}
+
+function addDays(dateStr: string, days: number) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${weekdays[d.getDay()]}）`;
+}
