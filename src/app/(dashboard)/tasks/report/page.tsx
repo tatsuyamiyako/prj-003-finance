@@ -13,9 +13,23 @@ type TaskWithRelations = Task & {
   member: { name: string } | null;
 };
 
-export default async function ReportPage() {
+export default async function ReportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
+  const { date } = await searchParams;
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
+  const targetDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today;
+  const isToday = targetDate === today;
+  const isPast = targetDate < today;
+
+  const prevDate = addDays(targetDate, -1);
+  const nextDate = addDays(targetDate, 1);
+  const canGoNext = nextDate <= today;
+
+  const archiveDays = Array.from({ length: 7 }, (_, i) => addDays(today, -(i + 1)));
 
   const [{ data: tasks }, { data: members }] = await Promise.all([
     supabase
@@ -32,18 +46,18 @@ export default async function ReportPage() {
   const inProgressTasks = allTasks.filter((t) => t.status === "in_progress");
   const todoTasks = allTasks.filter((t) => t.status === "todo");
   const overdueTasks = allTasks.filter(
-    (t) => t.due_date && t.status !== "done" && t.due_date < today
+    (t) => t.due_date && t.status !== "done" && t.due_date < targetDate
   );
   const dueSoonTasks = allTasks.filter(
     (t) =>
       t.due_date &&
       t.status !== "done" &&
-      t.due_date >= today &&
-      t.due_date <= addDays(today, 3)
+      t.due_date >= targetDate &&
+      t.due_date <= addDays(targetDate, 3)
   );
 
-  const recentlyDone = doneTasks.filter(
-    (t) => t.updated_at && t.updated_at.slice(0, 10) === today
+  const completedOnDate = doneTasks.filter(
+    (t) => t.updated_at && t.updated_at.slice(0, 10) === targetDate
   );
 
   const nextTasks = [...inProgressTasks, ...todoTasks]
@@ -66,7 +80,10 @@ export default async function ReportPage() {
     const memberTasks = allTasks.filter((t) => t.assigned_to === m.id);
     const done = memberTasks.filter((t) => t.status === "done").length;
     const active = memberTasks.filter((t) => t.status !== "done").length;
-    return { name: m.name, total: memberTasks.length, done, active };
+    const doneOnDate = memberTasks.filter(
+      (t) => t.status === "done" && t.updated_at?.slice(0, 10) === targetDate
+    ).length;
+    return { name: m.name, total: memberTasks.length, done, active, doneOnDate };
   });
 
   const aiComments = allTasks
@@ -79,10 +96,14 @@ export default async function ReportPage() {
 
   return (
     <div className="space-y-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">デイリーレポート</h1>
-          <p className="mt-0.5 text-sm text-slate-500">{formatDate(today)}</p>
+          <h1 className="text-lg font-semibold text-slate-900">
+            デイリーレポート
+            {isPast && <span className="ml-2 text-sm font-normal text-slate-400">(アーカイブ)</span>}
+          </h1>
+          <p className="mt-0.5 text-sm text-slate-500">{formatDate(targetDate)}</p>
         </div>
         <Link
           href="/tasks"
@@ -91,6 +112,66 @@ export default async function ReportPage() {
           タスク一覧へ
         </Link>
       </div>
+
+      {/* Date Navigation */}
+      <div className="flex items-center gap-3">
+        <Link
+          href={`/tasks/report?date=${prevDate}`}
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+        >
+          &larr; 前日
+        </Link>
+        {!isToday && (
+          <Link
+            href="/tasks/report"
+            className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            今日
+          </Link>
+        )}
+        {canGoNext ? (
+          <Link
+            href={`/tasks/report?date=${nextDate}`}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            翌日 &rarr;
+          </Link>
+        ) : (
+          <span className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-300">
+            翌日 &rarr;
+          </span>
+        )}
+      </div>
+
+      {/* Past Week Archive */}
+      <section>
+        <h2 className="text-xs font-medium text-slate-500">過去1週間</h2>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <Link
+            href="/tasks/report"
+            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              isToday
+                ? "bg-slate-900 text-white"
+                : "border border-slate-200 text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            今日
+          </Link>
+          {archiveDays.map((d) => (
+            <Link
+              key={d}
+              href={`/tasks/report?date=${d}`}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                targetDate === d
+                  ? "bg-slate-900 text-white"
+                  : "border border-slate-200 text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {formatShortDate(d)}
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* Overview Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -164,19 +245,24 @@ export default async function ReportPage() {
         </div>
       </section>
 
-      {/* Today's Completed */}
+      {/* Completed on Target Date */}
       <section>
-        <h2 className="text-sm font-semibold text-slate-900">本日完了したタスク</h2>
+        <h2 className="text-sm font-semibold text-slate-900">
+          {isToday ? "本日" : formatShortDate(targetDate)}完了したタスク
+          {completedOnDate.length > 0 && (
+            <span className="ml-1 text-xs font-normal text-slate-400">({completedOnDate.length}件)</span>
+          )}
+        </h2>
         <div className="mt-2">
-          {recentlyDone.length > 0 ? (
+          {completedOnDate.length > 0 ? (
             <div className="space-y-1.5">
-              {recentlyDone.map((t) => (
+              {completedOnDate.map((t) => (
                 <TaskRow key={t.id} task={t} />
               ))}
             </div>
           ) : (
             <p className="rounded-md border border-slate-100 bg-slate-50 py-4 text-center text-sm text-slate-400">
-              本日完了したタスクはまだありません
+              {isToday ? "本日完了したタスクはまだありません" : "この日に完了したタスクはありません"}
             </p>
           )}
         </div>
@@ -185,13 +271,14 @@ export default async function ReportPage() {
       {/* Member Stats */}
       <section>
         <h2 className="text-sm font-semibold text-slate-900">メンバー別タスク状況</h2>
-        <div className="mt-2 overflow-hidden rounded-lg border border-slate-200">
+        <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="px-4 py-2 text-left font-medium text-slate-600">メンバー</th>
                 <th className="px-4 py-2 text-right font-medium text-slate-600">担当数</th>
                 <th className="px-4 py-2 text-right font-medium text-slate-600">完了</th>
+                <th className="px-4 py-2 text-right font-medium text-slate-600">当日完了</th>
                 <th className="px-4 py-2 text-right font-medium text-slate-600">残り</th>
                 <th className="px-4 py-2 text-left font-medium text-slate-600">進捗</th>
               </tr>
@@ -204,6 +291,7 @@ export default async function ReportPage() {
                     <td className="px-4 py-2 font-medium text-slate-900">{m.name}</td>
                     <td className="px-4 py-2 text-right text-slate-600">{m.total}</td>
                     <td className="px-4 py-2 text-right text-emerald-600">{m.done}</td>
+                    <td className="px-4 py-2 text-right text-blue-600">{m.doneOnDate}</td>
                     <td className="px-4 py-2 text-right text-slate-600">{m.active}</td>
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
@@ -354,4 +442,10 @@ function formatDate(dateStr: string) {
   const d = new Date(dateStr);
   const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${weekdays[d.getDay()]}）`;
+}
+
+function formatShortDate(dateStr: string) {
+  const d = new Date(dateStr);
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+  return `${d.getMonth() + 1}/${d.getDate()}(${weekdays[d.getDay()]})`;
 }
