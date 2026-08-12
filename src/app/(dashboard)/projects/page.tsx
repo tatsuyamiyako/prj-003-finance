@@ -14,9 +14,9 @@ import { DeleteButton } from "../delete-button";
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; client?: string; invoice?: string; code?: string }>;
+  searchParams: Promise<{ status?: string; client?: string; invoice?: string; code?: string; revenue_month?: string; payment_month?: string }>;
 }) {
-  const { status, client, invoice, code } = await searchParams;
+  const { status, client, invoice, code, revenue_month, payment_month } = await searchParams;
   const supabase = await createClient();
 
   let query = supabase
@@ -36,6 +36,12 @@ export default async function ProjectsPage({
   if (invoice) {
     query = query.eq("invoice_status", invoice);
   }
+  if (revenue_month) {
+    query = query.eq("revenue_month", `${revenue_month}-01`);
+  }
+  if (payment_month) {
+    query = query.eq("payment_month", `${payment_month}-01`);
+  }
 
   const [{ data: projects }, { data: allProjects }] = await Promise.all([
     query,
@@ -46,7 +52,7 @@ export default async function ProjectsPage({
     ...new Set((allProjects ?? []).map((p) => p.client_name as string)),
   ];
 
-  const hasFilter = !!(status || client || invoice || code);
+  const hasFilter = !!(status || client || invoice || code || revenue_month || payment_month);
 
   return (
     <div>
@@ -121,6 +127,28 @@ export default async function ProjectsPage({
             <option value="not_sent">未送付</option>
           </select>
         </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500">
+            売上月
+          </label>
+          <input
+            type="month"
+            name="revenue_month"
+            defaultValue={revenue_month ?? ""}
+            className="mt-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-slate-900"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500">
+            入金月
+          </label>
+          <input
+            type="month"
+            name="payment_month"
+            defaultValue={payment_month ?? ""}
+            className="mt-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-slate-900"
+          />
+        </div>
         <button
           type="submit"
           className="rounded-md bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-600"
@@ -146,6 +174,8 @@ export default async function ProjectsPage({
               <th className="px-3 py-2">クライアント</th>
               <th className="px-3 py-2">ステータス</th>
               <th className="px-3 py-2 text-right">売上(税抜)</th>
+              <th className="px-3 py-2">売上月</th>
+              <th className="px-3 py-2">入金月</th>
               <th className="px-3 py-2">請求書</th>
               <th className="px-3 py-2">着金</th>
               <th className="px-3 py-2">操作</th>
@@ -171,6 +201,12 @@ export default async function ProjectsPage({
                 <td className="whitespace-nowrap px-3 py-2 text-right text-slate-700">
                   {formatYen(p.revenue_excl_tax)}
                 </td>
+                <td className="whitespace-nowrap px-3 py-2 text-slate-500">
+                  {p.revenue_month?.slice(0, 7) ?? "—"}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2 text-slate-500">
+                  {p.payment_month?.slice(0, 7) ?? "—"}
+                </td>
                 <td className="px-3 py-2 text-slate-500">
                   {p.invoice_status === "sent" ? "送付済" : "未送付"}
                 </td>
@@ -194,7 +230,7 @@ export default async function ProjectsPage({
             ))}
             {(projects ?? []).length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-slate-400">
+                <td colSpan={10} className="px-3 py-8 text-center text-slate-400">
                   該当する案件がありません。
                 </td>
               </tr>
