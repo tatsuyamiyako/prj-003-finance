@@ -9,6 +9,7 @@ import {
   type ProjectStatus,
 } from "@/lib/types";
 import { deleteProject } from "./actions";
+import { DeleteButton } from "../delete-button";
 
 export default async function ProjectsPage({
   searchParams,
@@ -183,15 +184,11 @@ export default async function ProjectsPage({
                   >
                     編集
                   </Link>
-                  <form action={deleteProject} className="ml-2 inline">
-                    <input type="hidden" name="id" value={p.id} />
-                    <button
-                      type="submit"
-                      className="text-red-400 hover:text-red-600"
-                    >
-                      削除
-                    </button>
-                  </form>
+                  <DeleteButton
+                    action={deleteProject}
+                    id={p.id}
+                    confirmMessage={`「${p.name ?? p.code}」を本当に削除しますか？`}
+                  />
                 </td>
               </tr>
             ))}

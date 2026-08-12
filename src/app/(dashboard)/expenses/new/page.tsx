@@ -9,7 +9,7 @@ export default async function NewExpensePage() {
     await Promise.all([
       supabase
         .from("projects")
-        .select("id, code, client_name")
+        .select("id, code, client_name, name")
         .order("code"),
       supabase
         .from("expense_categories")
@@ -27,7 +27,7 @@ export default async function NewExpensePage() {
       <h1 className="text-lg font-semibold text-slate-900">経費を追加</h1>
       <div className="mt-4">
         <ExpenseForm
-          projects={(projects ?? []) as Pick<Project, "id" | "code" | "client_name">[]}
+          projects={(projects ?? []) as Pick<Project, "id" | "code" | "client_name" | "name">[]}
           categories={(categories ?? []) as ExpenseCategory[]}
           members={(members ?? []) as Member[]}
           action={createExpense}

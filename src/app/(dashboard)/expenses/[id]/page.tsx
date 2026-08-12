@@ -13,7 +13,7 @@ export default async function EditExpensePage(
   const [{ data: expense }, { data: projects }, { data: categories }, { data: members }] =
     await Promise.all([
       supabase.from("expenses").select("*").eq("id", id).single(),
-      supabase.from("projects").select("id, code, client_name").order("code"),
+      supabase.from("projects").select("id, code, client_name, name").order("code"),
       supabase.from("expense_categories").select("*").order("sort_order"),
       supabase.from("members").select("*").eq("is_active", true).order("name"),
     ]);
@@ -25,7 +25,7 @@ export default async function EditExpensePage(
       <h1 className="text-lg font-semibold text-slate-900">経費編集</h1>
       <div className="mt-4">
         <ExpenseForm
-          projects={(projects ?? []) as Pick<Project, "id" | "code" | "client_name">[]}
+          projects={(projects ?? []) as Pick<Project, "id" | "code" | "client_name" | "name">[]}
           categories={(categories ?? []) as ExpenseCategory[]}
           members={(members ?? []) as Member[]}
           expense={expense as Expense}

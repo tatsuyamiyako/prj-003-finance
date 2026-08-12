@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatYen } from "@/lib/types";
 import { deleteExpense } from "./actions";
+import { DeleteButton } from "../delete-button";
 
 function nextMonth(month: string): string {
   const [y, m] = month.split("-").map(Number);
@@ -114,15 +115,11 @@ export default async function ExpensesPage({
                   >
                     編集
                   </Link>
-                  <form action={deleteExpense} className="ml-2 inline">
-                    <input type="hidden" name="id" value={e.id as string} />
-                    <button
-                      type="submit"
-                      className="text-red-400 hover:text-red-600"
-                    >
-                      削除
-                    </button>
-                  </form>
+                  <DeleteButton
+                    action={deleteExpense}
+                    id={e.id as string}
+                    confirmMessage={`「${e.description as string}」を本当に削除しますか？`}
+                  />
                 </td>
               </tr>
             ))}

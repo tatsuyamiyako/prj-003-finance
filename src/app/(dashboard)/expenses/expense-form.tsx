@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Expense, ExpenseCategory, Member, Project } from "@/lib/types";
 
 type Props = {
-  projects: Pick<Project, "id" | "code" | "client_name">[];
+  projects: Pick<Project, "id" | "code" | "client_name" | "name">[];
   categories: ExpenseCategory[];
   members: Member[];
   expense?: Expense;
@@ -130,7 +130,7 @@ export function ExpenseForm({
           <option value="__common__">全社共通</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.code} — {p.client_name}
+              {p.code} — {p.client_name}{p.name ? ` / ${p.name}` : ""}
             </option>
           ))}
         </select>
