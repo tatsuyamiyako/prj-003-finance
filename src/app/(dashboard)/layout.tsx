@@ -44,9 +44,6 @@ export default async function DashboardLayout({
           <div className="mt-4 border-t border-slate-200 pt-4">
             <span className="block px-3 text-sm font-semibold text-slate-900">タスク管理</span>
             <div className="mt-1 space-y-0.5">
-              <Link href="/tasks" className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200">
-                タスク一覧
-              </Link>
               {(members ?? []).map((m) => (
                 <Link
                   key={m.id}
