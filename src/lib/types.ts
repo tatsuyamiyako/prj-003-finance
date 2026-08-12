@@ -71,6 +71,7 @@ export type Expense = {
   split_member_ids: string[] | null;
   notes: string | null;
   needs_review: boolean;
+  is_fixed: boolean;
 };
 
 export type TaskStatus = "todo" | "in_progress" | "done";

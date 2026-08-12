@@ -19,6 +19,7 @@ export function ExpenseForm({
   action,
 }: Props) {
   const [recurring, setRecurring] = useState(false);
+  const [isFixed, setIsFixed] = useState(expense?.is_fixed ?? false);
   const isEdit = !!expense;
   const settlementMembers = members.filter((m) => m.is_settlement_participant);
   const allIds = settlementMembers.map((m) => m.id);
@@ -29,6 +30,18 @@ export function ExpenseForm({
   return (
     <form action={action} className="max-w-xl space-y-4">
       {expense && <input type="hidden" name="id" value={expense.id} />}
+
+      <label className="flex items-center gap-2 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          name="is_fixed"
+          value="true"
+          checked={isFixed}
+          onChange={(e) => setIsFixed(e.target.checked)}
+          className="rounded border-slate-300"
+        />
+        固定費
+      </label>
 
       {!isEdit && (
         <label className="flex items-center gap-2 text-sm text-slate-700">

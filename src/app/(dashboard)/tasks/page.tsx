@@ -51,7 +51,7 @@ export default async function TasksPage({
   const [{ data: tasks }, { data: members }, { data: projects }] = await Promise.all([
     query,
     supabase.from("members").select("id, name").eq("is_active", true).order("name"),
-    supabase.from("projects").select("id, code, client_name, name").order("code"),
+    supabase.from("projects").select("id, code, client_name, name").neq("status", "lost").order("code"),
   ]);
 
   let todayPicks: { task_id: string }[] = [];

@@ -12,7 +12,7 @@ export default async function EditTaskPage(
 
   const [{ data: task }, { data: projects }, { data: members }] = await Promise.all([
     supabase.from("tasks").select("*").eq("id", id).single(),
-    supabase.from("projects").select("id, code, client_name, name").order("code"),
+    supabase.from("projects").select("id, code, client_name, name").neq("status", "lost").order("code"),
     supabase.from("members").select("*").eq("is_active", true).order("name"),
   ]);
 

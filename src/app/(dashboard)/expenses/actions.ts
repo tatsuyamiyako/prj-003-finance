@@ -38,6 +38,7 @@ export async function createExpense(formData: FormData) {
     paid_by_member_id: (formData.get("paid_by_member_id") as string) || null,
     split_member_ids: splitIds.length > 0 ? splitIds : null,
     notes: (formData.get("notes") as string) || null,
+    is_fixed: formData.get("is_fixed") === "true",
   };
 
   if (monthFrom && monthTo) {
@@ -80,6 +81,7 @@ export async function updateExpense(formData: FormData) {
       paid_by_member_id: (formData.get("paid_by_member_id") as string) || null,
       split_member_ids: splitIds.length > 0 ? splitIds : null,
       notes: (formData.get("notes") as string) || null,
+      is_fixed: formData.get("is_fixed") === "true",
     })
     .eq("id", id);
 

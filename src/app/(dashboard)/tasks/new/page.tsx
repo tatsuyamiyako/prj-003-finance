@@ -6,7 +6,7 @@ import type { Member, Project } from "@/lib/types";
 export default async function NewTaskPage() {
   const supabase = await createClient();
   const [{ data: projects }, { data: members }] = await Promise.all([
-    supabase.from("projects").select("id, code, client_name, name").order("code"),
+    supabase.from("projects").select("id, code, client_name, name").neq("status", "lost").order("code"),
     supabase.from("members").select("*").eq("is_active", true).order("name"),
   ]);
 

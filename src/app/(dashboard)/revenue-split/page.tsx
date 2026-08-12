@@ -37,6 +37,7 @@ export default async function RevenueSplitPage({
       .from("projects")
       .select("id, code, name, client_name, revenue_excl_tax, payment_month, split_member_ids")
       .not("payment_month", "is", null)
+      .neq("status", "lost")
       .gt("revenue_excl_tax", 0)
       .order("payment_month", { ascending: false }),
     supabase
