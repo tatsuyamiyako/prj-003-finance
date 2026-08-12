@@ -9,9 +9,10 @@ import {
   type Project,
   type Member,
 } from "@/lib/types";
-import { createTask, deleteTask, toggleTaskStatus } from "./actions";
+import { createTask, deleteTask, toggleTaskStatus, pickTaskForToday, unpickTaskForToday } from "./actions";
 import { DeleteButton } from "../delete-button";
 import { QuickAddForm } from "./quick-add-form";
+import { TodayTaskPicker } from "./today-task-picker";
 
 type TaskWithRelations = Task & {
   project: { id: string; code: string; client_name: string; name: string | null } | null;
@@ -32,6 +33,7 @@ export default async function TasksPage({
 }) {
   const { status, assigned } = await searchParams;
   const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
 
   let query = supabase
     .from("tasks")
@@ -52,9 +54,28 @@ export default async function TasksPage({
     supabase.from("projects").select("id, code, client_name, name").order("code"),
   ]);
 
+  let todayPicks: { task_id: string }[] = [];
+  if (assigned) {
+    const { data, error } = await supabase
+      .from("daily_task_picks")
+      .select("task_id")
+      .eq("member_id", assigned)
+      .eq("pick_date", today);
+    if (!error) todayPicks = data ?? [];
+  }
+
   const assignedMember = assigned ? (members ?? []).find((m) => m.id === assigned) : null;
 
   const allTasks = (tasks ?? []) as unknown as TaskWithRelations[];
+  const pickedTaskIds = new Set(todayPicks.map((p) => p.task_id));
+
+  const pickedTasks = assigned ? allTasks.filter((t) => pickedTaskIds.has(t.id)) : [];
+  const unpickedActiveTasks = assigned
+    ? allTasks.filter((t) => !pickedTaskIds.has(t.id) && t.status !== "done")
+    : [];
+
+  const pickedDone = pickedTasks.filter((t) => t.status === "done").length;
+  const pickedTotal = pickedTasks.length;
 
   const projectMap = new Map<string, ProjectGroup>();
   const ungrouped: TaskWithRelations[] = [];
@@ -91,32 +112,40 @@ export default async function TasksPage({
 
   function renderTask(task: TaskWithRelations) {
     const isOverdue = task.due_date && task.status !== "done" && task.due_date < new Date().toISOString().slice(0, 10);
+    const isDone = task.status === "done";
+    const isPicked = pickedTaskIds.has(task.id);
     return (
       <div
         key={task.id}
-        className={`rounded-md border border-slate-100 bg-white px-3 py-2 ${task.status === "done" ? "opacity-50" : ""}`}
+        className={`rounded-md border border-slate-100 bg-white px-3 py-2 ${isDone ? "opacity-50" : ""}`}
       >
         <div className="flex items-center gap-3">
           <form action={toggleTaskStatus} className="shrink-0">
             <input type="hidden" name="id" value={task.id} />
             <input type="hidden" name="current_status" value={task.status} />
-            <button type="submit">
-              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${taskStatusBadgeClass(task.status)}`}>
-                {taskStatusLabel(task.status)}
-              </span>
+            <button type="submit" className={`flex h-5 w-5 items-center justify-center rounded border ${isDone ? "border-emerald-400 bg-emerald-100 text-emerald-600" : "border-slate-300 text-transparent hover:border-slate-400"}`}>
+              {isDone && <span className="text-xs">&#10003;</span>}
             </button>
           </form>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskStatusBadgeClass(task.status)}`}>
+            {taskStatusLabel(task.status)}
+          </span>
           <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskPriorityBadgeClass(task.priority)}`}>
             {priorityLabel(task.priority)}
           </span>
           <div className="min-w-0 flex-1">
-            <Link href={`/tasks/${task.id}`} className="text-sm text-slate-900 hover:underline">
+            <Link href={`/tasks/${task.id}`} className={`text-sm hover:underline ${isDone ? "text-slate-400 line-through" : "text-slate-900"}`}>
               {task.title}
             </Link>
             {task.description && (
-              <p className="mt-0.5 truncate text-xs text-slate-400">{task.description}</p>
+              <p className={`mt-0.5 truncate text-xs ${isDone ? "text-slate-300 line-through" : "text-slate-400"}`}>{task.description}</p>
             )}
           </div>
+          {isPicked && (
+            <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">
+              今日
+            </span>
+          )}
           {task.member && (
             <span className="shrink-0 text-xs text-slate-500">{task.member.name}</span>
           )}
@@ -153,6 +182,88 @@ export default async function TasksPage({
           詳細入力
         </Link>
       </div>
+
+      {/* Today's Tasks Section - only when filtered by member */}
+      {assigned && assignedMember && (
+        <section className="mt-4 rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-blue-900">
+              今日やるタスク
+              {pickedTotal > 0 && (
+                <span className="ml-2 text-xs font-normal text-blue-600">
+                  {pickedDone}/{pickedTotal} 完了
+                </span>
+              )}
+            </h2>
+          </div>
+          {pickedTotal > 0 && (
+            <div className="mt-2 h-1.5 w-full rounded-full bg-blue-200">
+              <div
+                className="h-1.5 rounded-full bg-blue-500 transition-all"
+                style={{ width: `${pickedTotal > 0 ? Math.round((pickedDone / pickedTotal) * 100) : 0}%` }}
+              />
+            </div>
+          )}
+          <div className="mt-3 space-y-1.5">
+            {pickedTasks.length > 0 ? (
+              pickedTasks.map((task) => {
+                const done = task.status === "done";
+                return (
+                <div
+                  key={task.id}
+                  className={`flex items-center gap-3 rounded-md bg-white px-3 py-2 ${done ? "opacity-50" : ""}`}
+                >
+                  <form action={toggleTaskStatus} className="shrink-0">
+                    <input type="hidden" name="id" value={task.id} />
+                    <input type="hidden" name="current_status" value={task.status} />
+                    <button type="submit" className={`flex h-5 w-5 items-center justify-center rounded border ${done ? "border-emerald-400 bg-emerald-100 text-emerald-600" : "border-slate-300 text-transparent hover:border-slate-400"}`}>
+                      {done && <span className="text-xs">&#10003;</span>}
+                    </button>
+                  </form>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskPriorityBadgeClass(task.priority)}`}>
+                    {priorityLabel(task.priority)}
+                  </span>
+                  <Link href={`/tasks/${task.id}`} className={`min-w-0 flex-1 truncate text-sm hover:underline ${done ? "text-slate-400 line-through" : "text-slate-900"}`}>
+                    {task.title}
+                  </Link>
+                  {task.project && (
+                    <span className="shrink-0 text-xs text-slate-400">{task.project.code}</span>
+                  )}
+                  {task.due_date && (
+                    <span className="shrink-0 text-xs text-slate-400">{task.due_date}</span>
+                  )}
+                  <form action={unpickTaskForToday}>
+                    <input type="hidden" name="task_id" value={task.id} />
+                    <input type="hidden" name="member_id" value={assigned} />
+                    <button type="submit" className="text-xs text-slate-400 hover:text-red-500">
+                      外す
+                    </button>
+                  </form>
+                </div>
+                );
+              })
+            ) : (
+              <p className="py-3 text-center text-sm text-blue-400">
+                まだタスクが選ばれていません
+              </p>
+            )}
+          </div>
+          {/* Picker to add tasks */}
+          {unpickedActiveTasks.length > 0 && (
+            <TodayTaskPicker
+              tasks={unpickedActiveTasks.map((t) => ({
+                id: t.id,
+                title: t.title,
+                projectCode: t.project?.code ?? null,
+                priority: t.priority,
+                dueDate: t.due_date,
+              }))}
+              memberId={assigned}
+              pickAction={pickTaskForToday}
+            />
+          )}
+        </section>
+      )}
 
       <div className="mt-4">
         <QuickAddForm

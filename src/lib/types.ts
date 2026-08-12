@@ -124,6 +124,37 @@ export function taskPriorityBadgeClass(value: TaskPriority) {
   }
 }
 
+export type DailyTaskPick = {
+  id: string;
+  task_id: string;
+  member_id: string;
+  pick_date: string;
+  created_at: string;
+};
+
+export type Schedule = {
+  id: string;
+  project_id: string | null;
+  title: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ScheduleItemSide = "bruscape" | "client";
+
+export type ScheduleItem = {
+  id: string;
+  schedule_id: string;
+  side: ScheduleItemSide;
+  title: string;
+  due_date: string | null;
+  sort_order: number;
+  is_done: boolean;
+  google_calendar_event_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProjectProfit = {
   project_id: string;
   code: string;

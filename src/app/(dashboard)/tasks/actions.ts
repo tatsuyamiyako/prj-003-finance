@@ -70,6 +70,42 @@ export async function updateAiComment(formData: FormData) {
   revalidatePath("/tasks");
 }
 
+export async function pickTaskForToday(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const task_id = formData.get("task_id") as string;
+  const member_id = formData.get("member_id") as string;
+  const pick_date = new Date().toISOString().slice(0, 10);
+
+  const { error } = await supabase.from("daily_task_picks").upsert(
+    { task_id, member_id, pick_date },
+    { onConflict: "task_id,member_id,pick_date" }
+  );
+  if (error) throw new Error(error.message);
+  revalidatePath("/tasks");
+}
+
+export async function unpickTaskForToday(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const task_id = formData.get("task_id") as string;
+  const member_id = formData.get("member_id") as string;
+  const pick_date = new Date().toISOString().slice(0, 10);
+
+  const { error } = await supabase
+    .from("daily_task_picks")
+    .delete()
+    .eq("task_id", task_id)
+    .eq("member_id", member_id)
+    .eq("pick_date", pick_date);
+  if (error) throw new Error(error.message);
+  revalidatePath("/tasks");
+}
+
 export async function toggleTaskStatus(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

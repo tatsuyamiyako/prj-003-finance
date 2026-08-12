@@ -61,6 +61,14 @@ export default async function DashboardLayout({
               </Link>
             </div>
           </div>
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <span className="block px-3 text-sm font-semibold text-slate-900">スケジュール管理</span>
+            <div className="mt-1 space-y-0.5">
+              <Link href="/schedules" className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200">
+                スケジュール一覧
+              </Link>
+            </div>
+          </div>
         </nav>
         <div className="border-t border-slate-200 px-4 py-3">
           <p className="truncate text-xs text-slate-500">{user.email}</p>

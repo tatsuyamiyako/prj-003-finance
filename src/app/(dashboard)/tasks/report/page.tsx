@@ -31,13 +31,17 @@ export default async function ReportPage({
 
   const archiveDays = Array.from({ length: 7 }, (_, i) => addDays(today, -(i + 1)));
 
-  const [{ data: tasks }, { data: members }] = await Promise.all([
+  const [{ data: tasks }, { data: members }, { data: dailyPicks }] = await Promise.all([
     supabase
       .from("tasks")
       .select("*, project:projects(id, code, client_name, name), member:members!assigned_to(name)")
       .order("priority")
       .order("due_date", { ascending: true, nullsFirst: false }),
     supabase.from("members").select("id, name").eq("is_active", true).order("name"),
+    supabase
+      .from("daily_task_picks")
+      .select("task_id, member_id")
+      .eq("pick_date", targetDate),
   ]);
 
   const allTasks = (tasks ?? []) as unknown as TaskWithRelations[];
@@ -84,6 +88,19 @@ export default async function ReportPage({
       (t) => t.status === "done" && t.updated_at?.slice(0, 10) === targetDate
     ).length;
     return { name: m.name, total: memberTasks.length, done, active, doneOnDate };
+  });
+
+  const pickedTaskIds = new Set((dailyPicks ?? []).map((p) => p.task_id));
+  const pickedTasks = allTasks.filter((t) => pickedTaskIds.has(t.id));
+  const pickedDone = pickedTasks.filter((t) => t.status === "done").length;
+  const pickedTotal = pickedTasks.length;
+
+  const memberDailyStats = (members ?? []).map((m) => {
+    const memberPicks = (dailyPicks ?? []).filter((p) => p.member_id === m.id);
+    const memberPickedIds = new Set(memberPicks.map((p) => p.task_id));
+    const memberPickedTasks = allTasks.filter((t) => memberPickedIds.has(t.id));
+    const done = memberPickedTasks.filter((t) => t.status === "done").length;
+    return { name: m.name, picked: memberPickedTasks.length, done, remaining: memberPickedTasks.length - done };
   });
 
   const aiComments = allTasks
@@ -172,6 +189,71 @@ export default async function ReportPage({
           ))}
         </div>
       </section>
+
+      {/* Today's Picked Tasks Progress */}
+      {pickedTotal > 0 && (
+        <section className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-blue-900">
+              {isToday ? "今日" : formatShortDate(targetDate)}やるタスクの進捗
+            </h2>
+            <span className="text-xs font-medium text-blue-600">
+              {pickedDone}/{pickedTotal} 完了 ({pickedTotal > 0 ? Math.round((pickedDone / pickedTotal) * 100) : 0}%)
+            </span>
+          </div>
+          <div className="mt-2 h-2 w-full rounded-full bg-blue-200">
+            <div
+              className="h-2 rounded-full bg-blue-500 transition-all"
+              style={{ width: `${pickedTotal > 0 ? Math.round((pickedDone / pickedTotal) * 100) : 0}%` }}
+            />
+          </div>
+          <div className="mt-3 space-y-1.5">
+            {pickedTasks.map((t) => (
+              <div
+                key={t.id}
+                className={`flex items-center gap-3 rounded-md bg-white px-3 py-1.5 ${t.status === "done" ? "opacity-50" : ""}`}
+              >
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskStatusBadgeClass(t.status)}`}>
+                  {taskStatusLabel(t.status)}
+                </span>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskPriorityBadgeClass(t.priority)}`}>
+                  {priorityLabel(t.priority)}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm text-slate-900">{t.title}</span>
+                {t.project && <span className="shrink-0 text-xs text-slate-400">{t.project.code}</span>}
+                {t.member && <span className="shrink-0 text-xs text-slate-500">{t.member.name}</span>}
+              </div>
+            ))}
+          </div>
+          {/* Per-member daily progress */}
+          {memberDailyStats.some((m) => m.picked > 0) && (
+            <div className="mt-3 border-t border-blue-200 pt-3">
+              <h3 className="text-xs font-medium text-blue-700">メンバー別</h3>
+              <div className="mt-1.5 space-y-1">
+                {memberDailyStats.filter((m) => m.picked > 0).map((m) => (
+                  <div key={m.name} className="flex items-center gap-2 text-xs">
+                    <span className="w-16 font-medium text-slate-700">{m.name}</span>
+                    <div className="h-1.5 flex-1 rounded-full bg-blue-200">
+                      <div
+                        className="h-1.5 rounded-full bg-blue-500"
+                        style={{ width: `${m.picked > 0 ? Math.round((m.done / m.picked) * 100) : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-slate-500">{m.done}/{m.picked}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+      {pickedTotal === 0 && isToday && (
+        <section className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+          <p className="text-center text-sm text-blue-400">
+            今日やるタスクがまだ選ばれていません。各メンバーのタスク一覧から選んでください。
+          </p>
+        </section>
+      )}
 
       {/* Overview Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
