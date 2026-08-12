@@ -7,6 +7,7 @@ import {
   type Task,
   type TaskPriority,
   type Project,
+  type Member,
 } from "@/lib/types";
 import { createTask, deleteTask, toggleTaskStatus } from "./actions";
 import { DeleteButton } from "../delete-button";
@@ -93,40 +94,48 @@ export default async function TasksPage({
     return (
       <div
         key={task.id}
-        className={`flex items-center gap-3 rounded-md border border-slate-100 bg-white px-3 py-2 ${task.status === "done" ? "opacity-50" : ""}`}
+        className={`rounded-md border border-slate-100 bg-white px-3 py-2 ${task.status === "done" ? "opacity-50" : ""}`}
       >
-        <form action={toggleTaskStatus} className="shrink-0">
-          <input type="hidden" name="id" value={task.id} />
-          <input type="hidden" name="current_status" value={task.status} />
-          <button type="submit">
-            <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${taskStatusBadgeClass(task.status)}`}>
-              {taskStatusLabel(task.status)}
-            </span>
-          </button>
-        </form>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskPriorityBadgeClass(task.priority)}`}>
-          {priorityLabel(task.priority)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <Link href={`/tasks/${task.id}`} className="text-sm text-slate-900 hover:underline">
-            {task.title}
-          </Link>
-          {task.description && (
-            <p className="mt-0.5 truncate text-xs text-slate-400">{task.description}</p>
-          )}
-        </div>
-        {task.member && (
-          <span className="shrink-0 text-xs text-slate-500">{task.member.name}</span>
-        )}
-        {task.due_date && (
-          <span className={`shrink-0 text-xs ${isOverdue ? "font-medium text-red-600" : "text-slate-400"}`}>
-            {task.due_date}
+        <div className="flex items-center gap-3">
+          <form action={toggleTaskStatus} className="shrink-0">
+            <input type="hidden" name="id" value={task.id} />
+            <input type="hidden" name="current_status" value={task.status} />
+            <button type="submit">
+              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${taskStatusBadgeClass(task.status)}`}>
+                {taskStatusLabel(task.status)}
+              </span>
+            </button>
+          </form>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${taskPriorityBadgeClass(task.priority)}`}>
+            {priorityLabel(task.priority)}
           </span>
-        )}
-        <div className="flex shrink-0 items-center gap-1">
-          <Link href={`/tasks/${task.id}`} className="text-xs text-slate-400 hover:text-slate-700">編集</Link>
-          <DeleteButton action={deleteTask} id={task.id} confirmMessage={`「${task.title}」を本当に削除しますか？`} />
+          <div className="min-w-0 flex-1">
+            <Link href={`/tasks/${task.id}`} className="text-sm text-slate-900 hover:underline">
+              {task.title}
+            </Link>
+            {task.description && (
+              <p className="mt-0.5 truncate text-xs text-slate-400">{task.description}</p>
+            )}
+          </div>
+          {task.member && (
+            <span className="shrink-0 text-xs text-slate-500">{task.member.name}</span>
+          )}
+          {task.due_date && (
+            <span className={`shrink-0 text-xs ${isOverdue ? "font-medium text-red-600" : "text-slate-400"}`}>
+              {task.due_date}
+            </span>
+          )}
+          <div className="flex shrink-0 items-center gap-1">
+            <Link href={`/tasks/${task.id}`} className="text-xs text-slate-400 hover:text-slate-700">編集</Link>
+            <DeleteButton action={deleteTask} id={task.id} confirmMessage={`「${task.title}」を本当に削除しますか？`} />
+          </div>
         </div>
+        {task.ai_comment && (
+          <div className="mt-1.5 flex items-start gap-1.5 rounded-md bg-violet-50 px-2.5 py-1.5">
+            <span className="shrink-0 text-xs text-violet-500">AI</span>
+            <p className="text-xs text-violet-700">{task.ai_comment}</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -148,6 +157,7 @@ export default async function TasksPage({
       <div className="mt-4">
         <QuickAddForm
           projects={(projects ?? []) as Pick<Project, "id" | "code" | "client_name" | "name">[]}
+          members={(members ?? []) as Pick<Member, "id" | "name">[]}
           action={createTask}
           assignedTo={assigned}
         />

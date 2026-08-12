@@ -75,6 +75,13 @@ export function TaskForm({ projects, members, task, action, onCancel }: Props) {
         <textarea name="description" defaultValue={task?.description ?? ""} rows={2} className={inputCls} />
       </div>
 
+      {task?.ai_comment && (
+        <div className="rounded-md bg-violet-50 px-3 py-2">
+          <span className="text-xs font-medium text-violet-500">AI コメント</span>
+          <p className="mt-1 text-sm text-violet-700">{task.ai_comment}</p>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
           {task ? "更新" : "追加"}

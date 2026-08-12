@@ -97,6 +97,7 @@ export type Task = {
   status: TaskStatus;
   priority: TaskPriority;
   due_date: string | null;
+  ai_comment: string | null;
   created_at: string;
   updated_at: string;
 };

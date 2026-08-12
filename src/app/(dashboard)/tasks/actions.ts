@@ -55,6 +55,21 @@ export async function deleteTask(formData: FormData) {
   revalidatePath("/tasks");
 }
 
+export async function updateAiComment(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = formData.get("id") as string;
+  const ai_comment = (formData.get("ai_comment") as string) || null;
+  const { error } = await supabase.from("tasks").update({
+    ai_comment,
+    updated_at: new Date().toISOString(),
+  }).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/tasks");
+}
+
 export async function toggleTaskStatus(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
