@@ -94,6 +94,7 @@ export type Task = {
   description: string | null;
   project_id: string | null;
   assigned_to: string | null;
+  schedule_item_id: string | null;
   status: TaskStatus;
   priority: TaskPriority;
   due_date: string | null;
@@ -147,9 +148,11 @@ export type ScheduleItem = {
   schedule_id: string;
   side: ScheduleItemSide;
   title: string;
+  start_date: string | null;
   due_date: string | null;
   sort_order: number;
   is_done: boolean;
+  assignee_ids: string[];
   google_calendar_event_id: string | null;
   created_at: string;
   updated_at: string;
