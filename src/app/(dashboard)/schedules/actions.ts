@@ -48,9 +48,26 @@ export async function deleteSchedule(formData: FormData) {
   if (!user) throw new Error("Unauthorized");
 
   const id = formData.get("id") as string;
+
+  const { data: items } = await supabase
+    .from("schedule_items")
+    .select("id, google_event_id")
+    .eq("schedule_id", id);
+
+  if (items && items.length > 0) {
+    for (const item of items) {
+      if (item.google_event_id) {
+        await deleteGoogleCalendarEvent(item.google_event_id);
+      }
+    }
+    const itemIds = items.map((i) => i.id);
+    await supabase.from("tasks").delete().in("schedule_item_id", itemIds);
+  }
+
   const { error } = await supabase.from("schedules").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/schedules");
+  revalidatePath("/tasks");
   redirect("/schedules");
 }
 
