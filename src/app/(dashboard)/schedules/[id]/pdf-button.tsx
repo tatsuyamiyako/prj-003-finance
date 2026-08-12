@@ -62,8 +62,8 @@ export function PdfButton({
       const cellStyle = "padding:1px;border:1px solid #cbd5e1;text-align:center;";
 
       // Weekday header
-      let weekdayRow = `<td style="width:70px;${cellStyle}font-weight:bold;background:#1e293b;color:#fff;font-size:10px;">担当</td>`;
-      let dateRow = `<td style="width:70px;${cellStyle}background:#1e293b;color:#fff;"></td>`;
+      let weekdayRow = `<td style="width:20px;${cellStyle}font-weight:bold;background:#1e293b;color:#fff;font-size:8px;writing-mode:vertical-rl;">担当</td>`;
+      let dateRow = `<td style="width:20px;${cellStyle}background:#1e293b;color:#fff;"></td>`;
 
       for (const day of days) {
         const dow = new Date(m.year, m.month, day).getDay();
@@ -83,7 +83,7 @@ export function PdfButton({
       }
 
       // BRU row
-      let bruRow = `<td style="width:70px;${cellStyle}padding:4px;background:#2563eb;color:#fff;font-size:10px;font-weight:bold;">BRÜSCAPE</td>`;
+      let bruRow = `<td style="width:20px;${cellStyle}padding:2px;background:#2563eb;color:#fff;font-size:9px;font-weight:bold;writing-mode:vertical-rl;">BRÜ</td>`;
       for (const day of days) {
         const dateStr = fmtDate(m.year, m.month, day);
         const dow = new Date(m.year, m.month, day).getDay();
@@ -96,7 +96,7 @@ export function PdfButton({
       }
 
       // Client row
-      let clientRow = `<td style="width:70px;${cellStyle}padding:4px;background:#f59e0b;color:#fff;font-size:10px;font-weight:bold;">お客様</td>`;
+      let clientRow = `<td style="width:20px;${cellStyle}padding:2px;background:#f59e0b;color:#fff;font-size:9px;font-weight:bold;writing-mode:vertical-rl;">お客様</td>`;
       for (const day of days) {
         const dateStr = fmtDate(m.year, m.month, day);
         const dow = new Date(m.year, m.month, day).getDay();
