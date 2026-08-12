@@ -89,6 +89,7 @@ export function InvoiceEditor({ project }: Props) {
 
   return (
     <div className="min-h-screen bg-slate-100 print:bg-white">
+      <style>{`@media print { @page { margin: 0; } }`}</style>
       <div className="border-b border-slate-200 bg-white print:hidden">
         <div className="mx-auto max-w-[210mm] px-8 py-4">
           <div className="flex items-center justify-between">
@@ -175,7 +176,7 @@ export function InvoiceEditor({ project }: Props) {
       </div>
 
       {/* Invoice preview */}
-      <div className="mx-auto max-w-[210mm] bg-white px-16 py-12 shadow-sm print:shadow-none print:px-0 print:py-0">
+      <div className="mx-auto max-w-[210mm] bg-white px-16 py-12 shadow-sm print:shadow-none print:px-12 print:py-10">
         <h1 className="text-center text-3xl font-bold tracking-widest text-slate-900">請 求 書</h1>
 
         <div className="mt-8 flex justify-between">
