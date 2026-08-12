@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { Schedule } from "@/lib/types";
+import { type Schedule, phaseBgClass } from "@/lib/types";
 import { deleteSchedule } from "./actions";
 import { DeleteButton } from "../delete-button";
 
@@ -43,6 +43,11 @@ export default async function SchedulesPage() {
                     {s.project.code} — {s.project.client_name}
                     {s.project.name ? ` / ${s.project.name}` : ""}
                   </p>
+                )}
+                {s.phase && (
+                  <span className={`mt-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium text-white ${phaseBgClass(s.phase)}`}>
+                    {s.phase}
+                  </span>
                 )}
               </div>
               <span className="shrink-0 text-xs text-slate-400">

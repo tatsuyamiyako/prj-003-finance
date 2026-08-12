@@ -67,6 +67,9 @@ export default async function DashboardLayout({
               <Link href="/schedules" className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200">
                 スケジュール一覧
               </Link>
+              <Link href="/gantt" className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200">
+                ガントチャート
+              </Link>
             </div>
           </div>
         </nav>

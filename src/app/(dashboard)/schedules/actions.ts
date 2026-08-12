@@ -15,10 +15,11 @@ export async function createSchedule(formData: FormData) {
 
   const title = formData.get("title") as string;
   const project_id = (formData.get("project_id") as string) || null;
+  const phase = (formData.get("phase") as string) || null;
 
   const { data, error } = await supabase
     .from("schedules")
-    .insert({ title, project_id })
+    .insert({ title, project_id, phase })
     .select("id")
     .single();
   if (error) throw new Error(error.message);
@@ -33,10 +34,11 @@ export async function updateSchedule(formData: FormData) {
   const id = formData.get("id") as string;
   const title = formData.get("title") as string;
   const project_id = (formData.get("project_id") as string) || null;
+  const phase = (formData.get("phase") as string) || null;
 
   const { error } = await supabase
     .from("schedules")
-    .update({ title, project_id, updated_at: new Date().toISOString() })
+    .update({ title, project_id, phase, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath(`/schedules/${id}`);

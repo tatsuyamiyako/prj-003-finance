@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { PHASE_SUGGESTIONS } from "@/lib/types";
 import { createSchedule } from "../actions";
 
 export default async function NewSchedulePage() {
@@ -29,6 +30,15 @@ export default async function NewSchedulePage() {
               </option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700">フェーズ（ガントチャート用）</label>
+          <input type="text" name="phase" list="phase-list" placeholder="例: 企画、撮影、制作…" className={inputCls} />
+          <datalist id="phase-list">
+            {PHASE_SUGGESTIONS.map((p) => (
+              <option key={p} value={p} />
+            ))}
+          </datalist>
         </div>
         <button
           type="submit"

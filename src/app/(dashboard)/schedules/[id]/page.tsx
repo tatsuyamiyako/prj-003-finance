@@ -16,6 +16,7 @@ import { ScheduleItemForm } from "./schedule-item-form";
 import { EditableItemRow } from "./editable-item-row";
 import { PdfButton } from "./pdf-button";
 import { SyncButton } from "./sync-button";
+import { PhaseSelector } from "./phase-selector";
 
 type ScheduleWithProject = Schedule & {
   project: { code: string; client_name: string; name: string | null } | null;
@@ -123,6 +124,14 @@ export default async function ScheduleDetailPage(
               {s.project.name ? ` / ${s.project.name}` : ""}
             </p>
           )}
+          <div className="mt-1">
+            <PhaseSelector
+              scheduleId={s.id}
+              title={s.title}
+              projectId={s.project_id}
+              currentPhase={s.phase}
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Link
