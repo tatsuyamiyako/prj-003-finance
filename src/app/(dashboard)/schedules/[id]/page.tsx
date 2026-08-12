@@ -140,7 +140,19 @@ export default async function ScheduleDetailPage(
         <section>
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-900">スケジュール表</h2>
-            <PdfButton />
+            <PdfButton
+              scheduleTitle={s.title}
+              projectLabel={s.project ? `${s.project.client_name}` : null}
+              items={allItems.map((i) => ({
+                title: i.title,
+                side: i.side,
+                start_date: i.start_date,
+                due_date: i.due_date,
+                is_done: i.is_done,
+              }))}
+              months={months}
+              holidays={[...holidays]}
+            />
           </div>
           <div id="gantt-chart" className="mt-2 space-y-4">
             {months.map(({ year, month }) => {
