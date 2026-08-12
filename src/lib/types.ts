@@ -138,7 +138,6 @@ export type Schedule = {
   id: string;
   project_id: string | null;
   title: string;
-  phase: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -160,22 +159,6 @@ export type ScheduleItem = {
   updated_at: string;
 };
 
-export const PHASE_SUGGESTIONS = [
-  "企画", "撮影", "制作", "編集", "確認", "納品", "運用",
-];
-
-export function phaseBgClass(value: string) {
-  switch (value) {
-    case "企画": return "bg-blue-400";
-    case "撮影": return "bg-amber-400";
-    case "制作": return "bg-violet-400";
-    case "編集": return "bg-indigo-400";
-    case "確認": return "bg-rose-400";
-    case "納品": return "bg-emerald-400";
-    case "運用": return "bg-cyan-400";
-    default: return "bg-slate-400";
-  }
-}
 
 export type ProjectProfit = {
   project_id: string;

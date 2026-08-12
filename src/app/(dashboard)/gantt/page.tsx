@@ -1,24 +1,25 @@
 import { createClient } from "@/lib/supabase/server";
-import {
-  PHASE_SUGGESTIONS,
-  phaseBgClass,
-} from "@/lib/types";
 
-type ScheduleRow = {
+type ItemRow = {
   id: string;
   title: string;
-  phase: string | null;
-  project_id: string | null;
-  project: { code: string; client_name: string; name: string | null } | null;
-  items: { start_date: string | null; due_date: string | null }[];
+  start_date: string | null;
+  due_date: string | null;
+  is_done: boolean;
+  schedule: {
+    id: string;
+    title: string;
+    project_id: string | null;
+    project: { code: string; client_name: string; name: string | null } | null;
+  };
 };
 
 type GanttBar = {
-  scheduleId: string;
-  scheduleTitle: string;
-  phase: string;
+  itemId: string;
+  label: string;
   startDate: string;
   endDate: string;
+  isDone: boolean;
 };
 
 type ProjectRow = {
@@ -53,45 +54,41 @@ export default async function GanttPage({
   const { from } = await searchParams;
   const supabase = await createClient();
 
-  const { data: schedules } = await supabase
-    .from("schedules")
-    .select("id, title, phase, project_id, project:projects(code, client_name, name), items:schedule_items(start_date, due_date)")
-    .not("phase", "is", null)
-    .not("project_id", "is", null)
-    .order("title");
+  const { data: items } = await supabase
+    .from("schedule_items")
+    .select("id, title, start_date, due_date, is_done, schedule:schedules!inner(id, title, project_id, project:projects!inner(code, client_name, name))")
+    .not("start_date", "is", null)
+    .order("start_date");
 
-  const allSchedules = (schedules ?? []) as unknown as ScheduleRow[];
+  const allItems = (items ?? []) as unknown as ItemRow[];
 
-  // Build bars from schedules
   const projectMap = new Map<string, ProjectRow>();
 
-  for (const s of allSchedules) {
-    if (!s.project || !s.phase || !s.project_id) continue;
+  for (const item of allItems) {
+    const proj = item.schedule.project;
+    const projId = item.schedule.project_id;
+    if (!proj || !projId) continue;
 
-    const dates = s.items
-      .flatMap((i) => [i.start_date, i.due_date].filter(Boolean) as string[]);
-    if (dates.length === 0) continue;
+    const startDate = item.start_date ?? item.due_date;
+    const endDate = item.due_date ?? item.start_date;
+    if (!startDate || !endDate) continue;
 
-    const sorted = [...dates].sort();
-    const startDate = sorted[0];
-    const endDate = sorted[sorted.length - 1];
-
-    if (!projectMap.has(s.project_id)) {
-      projectMap.set(s.project_id, {
-        projectId: s.project_id,
-        code: s.project.code,
-        clientName: s.project.client_name,
-        projectName: s.project.name,
+    if (!projectMap.has(projId)) {
+      projectMap.set(projId, {
+        projectId: projId,
+        code: proj.code,
+        clientName: proj.client_name,
+        projectName: proj.name,
         bars: [],
       });
     }
 
-    projectMap.get(s.project_id)!.bars.push({
-      scheduleId: s.id,
-      scheduleTitle: s.title,
-      phase: s.phase!,
-      startDate,
-      endDate,
+    projectMap.get(projId)!.bars.push({
+      itemId: item.id,
+      label: item.title,
+      startDate: startDate <= endDate ? startDate : endDate,
+      endDate: startDate <= endDate ? endDate : startDate,
+      isDone: item.is_done,
     });
   }
 
@@ -99,7 +96,6 @@ export default async function GanttPage({
     a.code.localeCompare(b.code),
   );
 
-  // Date range: 4 months
   const now = new Date();
   let baseYear = now.getFullYear();
   let baseMonth = now.getMonth();
@@ -136,7 +132,6 @@ export default async function GanttPage({
   const today = now.toISOString().slice(0, 10);
   const todayOffset = dayOffset(today);
 
-  // Filter to projects that have bars in visible range
   const visibleProjects = projectRows.filter((p) =>
     p.bars.some((b) => b.endDate >= rangeStart && b.startDate <= rangeEnd),
   );
@@ -144,16 +139,6 @@ export default async function GanttPage({
   return (
     <div className="space-y-6">
       <h1 className="text-lg font-semibold text-slate-900">ガントチャート</h1>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3">
-        {PHASE_SUGGESTIONS.map((p) => (
-          <div key={p} className="flex items-center gap-1.5">
-            <div className={`h-3 w-3 rounded-sm ${phaseBgClass(p)}`} />
-            <span className="text-xs text-slate-600">{p}</span>
-          </div>
-        ))}
-      </div>
 
       {/* Navigation */}
       <div className="flex items-center gap-2">
@@ -261,7 +246,6 @@ export default async function GanttPage({
                   </div>
                 </div>
                 <div className="relative flex-1" style={{ minHeight: `${rowHeight}px` }}>
-                  {/* Today line */}
                   {todayOffset >= 0 && todayOffset <= totalDays && (
                     <div
                       className="absolute top-0 bottom-0 w-px bg-red-400 opacity-40"
@@ -276,17 +260,19 @@ export default async function GanttPage({
                     const widthPct = ((end - start) / totalDays) * 100;
                     return (
                       <div
-                        key={bar.scheduleId}
-                        className={`absolute flex items-center rounded px-1.5 text-[10px] font-medium text-white shadow-sm ${phaseBgClass(bar.phase)}`}
+                        key={bar.itemId}
+                        className={`absolute flex items-center rounded px-1.5 text-[10px] font-medium text-white shadow-sm ${
+                          bar.isDone ? "bg-emerald-400" : "bg-blue-400"
+                        }`}
                         style={{
                           left: `${leftPct}%`,
                           width: `${widthPct}%`,
                           top: `${4 + idx * 28}px`,
                           height: "22px",
                         }}
-                        title={`${bar.phase}: ${bar.startDate} 〜 ${bar.endDate}\n${bar.scheduleTitle}`}
+                        title={`${bar.label}: ${bar.startDate} 〜 ${bar.endDate}`}
                       >
-                        <span className="truncate">{bar.phase}</span>
+                        <span className="truncate">{bar.label}</span>
                       </div>
                     );
                   })}
@@ -297,9 +283,20 @@ export default async function GanttPage({
 
           {visibleProjects.length === 0 && (
             <div className="px-4 py-12 text-center text-sm text-slate-400">
-              表示するスケジュールがありません。スケジュール作成時にフェーズを設定してください。
+              表示するスケジュールがありません。案件に紐づくスケジュールに日付を設定してください。
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 text-xs text-slate-500">
+        <div className="flex items-center gap-1.5">
+          <div className="h-3 w-3 rounded-sm bg-blue-400" />
+          <span>進行中</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-3 w-3 rounded-sm bg-emerald-400" />
+          <span>完了</span>
         </div>
       </div>
     </div>
