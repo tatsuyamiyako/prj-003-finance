@@ -7,6 +7,7 @@ import {
   PROJECT_STATUSES,
   type Project,
   type ProjectStatus,
+  clientLabel,
 } from "@/lib/types";
 import { deleteProject } from "./actions";
 import { DeleteButton } from "../delete-button";
@@ -108,7 +109,7 @@ export default async function ProjectsPage({
             <option value="">すべて</option>
             {clients.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {clientLabel(c)}
               </option>
             ))}
           </select>
@@ -190,7 +191,7 @@ export default async function ProjectsPage({
                   </Link>
                 </td>
                 <td className="px-3 py-2 text-slate-700">{p.name ?? "—"}</td>
-                <td className="px-3 py-2 text-slate-700">{p.client_name}</td>
+                <td className="px-3 py-2 text-slate-700">{clientLabel(p.client_name)}</td>
                 <td className="px-3 py-2">
                   <span
                     className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(p.status as ProjectStatus)}`}

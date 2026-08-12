@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { clientLabel } from "@/lib/types";
 import { createSchedule } from "../actions";
 
 export default async function NewSchedulePage() {
@@ -25,7 +26,7 @@ export default async function NewSchedulePage() {
             <option value="">なし</option>
             {(projects ?? []).map((p) => (
               <option key={p.id} value={p.id}>
-                {p.code} — {p.client_name}{p.name ? ` / ${p.name}` : ""}
+                {p.code} — {clientLabel(p.client_name)}{p.name ? ` / ${p.name}` : ""}
               </option>
             ))}
           </select>

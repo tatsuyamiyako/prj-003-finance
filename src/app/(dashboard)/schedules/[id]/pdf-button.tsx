@@ -123,7 +123,7 @@ export function PdfButton({
       `;
     }
 
-    const title = projectLabel
+    const title = (projectLabel && !scheduleTitle.includes("【"))
       ? `【${projectLabel}】${scheduleTitle}`
       : scheduleTitle;
 

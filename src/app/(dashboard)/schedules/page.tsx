@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { type Schedule } from "@/lib/types";
+import { type Schedule, clientLabel } from "@/lib/types";
 import { deleteSchedule } from "./actions";
 import { DeleteButton } from "../delete-button";
 
@@ -40,7 +40,7 @@ export default async function SchedulesPage() {
                 </Link>
                 {s.project && (
                   <p className="mt-0.5 text-xs text-slate-400">
-                    {s.project.code} — {s.project.client_name}
+                    {s.project.code} — {clientLabel(s.project.client_name)}
                     {s.project.name ? ` / ${s.project.name}` : ""}
                   </p>
                 )}

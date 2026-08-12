@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   taskStatusLabel,
   taskStatusBadgeClass,
+  clientLabel,
   taskPriorityBadgeClass,
   type Task,
   type TaskPriority,
@@ -330,7 +331,7 @@ export default async function TasksPage({
               <div className="border-b border-slate-200 px-4 py-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-slate-900">
-                    {group.project.code} — {group.project.client_name}
+                    {group.project.code} — {clientLabel(group.project.client_name)}
                     {group.project.name ? ` / ${group.project.name}` : ""}
                   </h2>
                   <span className="text-xs text-slate-500">

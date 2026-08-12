@@ -251,7 +251,7 @@ export async function syncScheduleToTasks(formData: FormData) {
       .select("code, client_name")
       .eq("id", schedule.project_id)
       .single();
-    if (proj) projectLabel = `${proj.code} — ${proj.client_name}`;
+    if (proj) projectLabel = `${proj.code} — ${proj.client_name}様`;
   }
 
   const syncItems = items.map((item: {

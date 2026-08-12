@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import type { Schedule, ScheduleItem, Member } from "@/lib/types";
+import { clientLabel } from "@/lib/types";
 import { getJapaneseHolidays } from "@/lib/holidays";
 import Link from "next/link";
 import {
@@ -119,7 +120,7 @@ export default async function ScheduleDetailPage(
           <h1 className="text-lg font-semibold text-slate-900">{s.title}</h1>
           {s.project && (
             <p className="mt-0.5 text-sm text-slate-500">
-              {s.project.code} — {s.project.client_name}
+              {s.project.code} — {clientLabel(s.project.client_name)}
               {s.project.name ? ` / ${s.project.name}` : ""}
             </p>
           )}
@@ -142,7 +143,7 @@ export default async function ScheduleDetailPage(
             <h2 className="text-sm font-semibold text-slate-900">スケジュール表</h2>
             <PdfButton
               scheduleTitle={s.title}
-              projectLabel={s.project ? `${s.project.client_name}` : null}
+              projectLabel={s.project ? clientLabel(s.project.client_name) : null}
               items={allItems.map((i) => ({
                 title: i.title,
                 side: i.side,

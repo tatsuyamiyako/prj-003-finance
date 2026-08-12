@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import type { Member, Project } from "@/lib/types";
+import { clientLabel } from "@/lib/types";
 
 type Props = {
   projects: Pick<Project, "id" | "code" | "client_name" | "name">[];
@@ -43,7 +44,7 @@ export function QuickAddForm({ projects, members, action, assignedTo }: Props) {
           <option value="">案件なし</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.code} — {p.client_name}{p.name ? ` / ${p.name}` : ""}
+              {p.code} — {clientLabel(p.client_name)}{p.name ? ` / ${p.name}` : ""}
             </option>
           ))}
         </select>

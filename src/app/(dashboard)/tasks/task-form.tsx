@@ -1,7 +1,7 @@
 "use client";
 
 import type { Member, Project, Task } from "@/lib/types";
-import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/types";
+import { TASK_STATUSES, TASK_PRIORITIES, clientLabel } from "@/lib/types";
 
 type Props = {
   projects: Pick<Project, "id" | "code" | "client_name" | "name">[];
@@ -64,7 +64,7 @@ export function TaskForm({ projects, members, task, action, onCancel }: Props) {
           <option value="">なし</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.code} — {p.client_name}{p.name ? ` / ${p.name}` : ""}
+              {p.code} — {clientLabel(p.client_name)}{p.name ? ` / ${p.name}` : ""}
             </option>
           ))}
         </select>

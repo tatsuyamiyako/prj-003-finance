@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { clientLabel } from "@/lib/types";
 
 type ItemRow = {
   id: string;
@@ -241,7 +242,7 @@ export default async function GanttPage({
                     {project.code}
                   </div>
                   <div className="mt-0.5 truncate text-[10px] text-slate-500">
-                    {project.clientName}
+                    {clientLabel(project.clientName)}
                     {project.projectName ? ` / ${project.projectName}` : ""}
                   </div>
                 </div>

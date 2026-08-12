@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { formatYen } from "@/lib/types";
+import { formatYen, clientLabel } from "@/lib/types";
 
 type Project = {
   id: string;
@@ -199,7 +199,7 @@ export default async function RevenueSplitPage({
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
                           {r.projects.map((p) => (
                             <span key={p.code}>
-                              {p.code} {p.name ?? p.clientName}: {formatYen(p.share)}
+                              {p.code} {p.name ?? clientLabel(p.clientName)}: {formatYen(p.share)}
                             </span>
                           ))}
                         </div>

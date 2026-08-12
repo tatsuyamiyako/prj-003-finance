@@ -3,6 +3,7 @@ import {
   taskStatusLabel,
   taskStatusBadgeClass,
   taskPriorityBadgeClass,
+  clientLabel,
   type Task,
   type TaskPriority,
 } from "@/lib/types";
@@ -107,7 +108,7 @@ export default async function ReportPage({
     .filter((t) => t.ai_comment && t.status !== "done")
     .map((t) => ({
       title: t.title,
-      project: t.project ? `${t.project.code} ${t.project.client_name}` : null,
+      project: t.project ? `${t.project.code} ${clientLabel(t.project.client_name)}` : null,
       comment: t.ai_comment!,
     }));
 

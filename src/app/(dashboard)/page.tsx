@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   formatYen,
   formatPercent,
+  clientLabel,
   statusLabel,
   statusBadgeClass,
   PROJECT_STATUSES,
@@ -152,7 +153,7 @@ export default async function DashboardPage({
             <option value="">すべて</option>
             {clients.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {clientLabel(c)}
               </option>
             ))}
           </select>
@@ -208,7 +209,7 @@ export default async function DashboardPage({
                 <td className="px-3 py-2 text-slate-700">
                   {p.project_name ?? "—"}
                 </td>
-                <td className="px-3 py-2 text-slate-700">{p.client_name}</td>
+                <td className="px-3 py-2 text-slate-700">{clientLabel(p.client_name)}</td>
                 <td className="px-3 py-2 text-slate-500">
                   {p.business_name ?? "—"}
                 </td>
