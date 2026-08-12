@@ -6,9 +6,11 @@ import {
   taskPriorityBadgeClass,
   type Task,
   type TaskPriority,
+  type Project,
 } from "@/lib/types";
-import { deleteTask, toggleTaskStatus } from "./actions";
+import { createTask, deleteTask, toggleTaskStatus } from "./actions";
 import { DeleteButton } from "../delete-button";
+import { QuickAddForm } from "./quick-add-form";
 
 type TaskWithRelations = Task & {
   project: { id: string; code: string; client_name: string; name: string | null } | null;
@@ -43,10 +45,13 @@ export default async function TasksPage({
     query = query.eq("assigned_to", assigned);
   }
 
-  const [{ data: tasks }, { data: members }] = await Promise.all([
+  const [{ data: tasks }, { data: members }, { data: projects }] = await Promise.all([
     query,
     supabase.from("members").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("projects").select("id, code, client_name, name").order("code"),
   ]);
+
+  const assignedMember = assigned ? (members ?? []).find((m) => m.id === assigned) : null;
 
   const allTasks = (tasks ?? []) as unknown as TaskWithRelations[];
 
@@ -129,13 +134,23 @@ export default async function TasksPage({
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-900">タスク管理</h1>
+        <h1 className="text-lg font-semibold text-slate-900">
+          {assignedMember ? `${assignedMember.name}のタスク` : "タスク管理"}
+        </h1>
         <Link
           href="/tasks/new"
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
         >
-          タスクを追加
+          詳細入力
         </Link>
+      </div>
+
+      <div className="mt-4">
+        <QuickAddForm
+          projects={(projects ?? []) as Pick<Project, "id" | "code" | "client_name" | "name">[]}
+          action={createTask}
+          assignedTo={assigned}
+        />
       </div>
 
       <form className="mt-4 flex flex-wrap items-end gap-3">

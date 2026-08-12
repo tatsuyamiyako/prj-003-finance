@@ -11,19 +11,16 @@ const NAV = [
   { href: "/revenue-split", label: "個人別売上" },
 ] as const;
 
-const TASK_NAV = [
-  { href: "/tasks", label: "タスク一覧" },
-] as const;
-
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [{ data: { user } }, { data: members }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from("members").select("id, name").eq("is_active", true).order("name"),
+  ]);
   if (!user) redirect("/login");
 
   return (
@@ -47,13 +44,16 @@ export default async function DashboardLayout({
           <div className="mt-4 border-t border-slate-200 pt-4">
             <span className="block px-3 text-sm font-semibold text-slate-900">タスク管理</span>
             <div className="mt-1 space-y-0.5">
-              {TASK_NAV.map((item) => (
+              <Link href="/tasks" className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200">
+                タスク一覧
+              </Link>
+              {(members ?? []).map((m) => (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={m.id}
+                  href={`/tasks?assigned=${m.id}`}
                   className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
                 >
-                  {item.label}
+                  {m.name}タスク一覧
                 </Link>
               ))}
             </div>
