@@ -11,6 +11,10 @@ const NAV = [
   { href: "/revenue-split", label: "個人別売上" },
 ] as const;
 
+const TASK_NAV = [
+  { href: "/tasks", label: "タスク一覧" },
+] as const;
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -28,16 +32,32 @@ export default async function DashboardLayout({
         <div className="border-b border-slate-200 px-4 py-3">
           <span className="text-sm font-semibold text-slate-900">財務管理</span>
         </div>
-        <nav className="flex-1 space-y-0.5 px-2 py-3">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav className="flex-1 px-2 py-3">
+          <div className="space-y-0.5">
+            {NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <span className="block px-3 text-sm font-semibold text-slate-900">タスク管理</span>
+            <div className="mt-1 space-y-0.5">
+              {TASK_NAV.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
         </nav>
         <div className="border-t border-slate-200 px-4 py-3">
           <p className="truncate text-xs text-slate-500">{user.email}</p>

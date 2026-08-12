@@ -73,6 +73,56 @@ export type Expense = {
   needs_review: boolean;
 };
 
+export type TaskStatus = "todo" | "in_progress" | "done";
+export type TaskPriority = "low" | "medium" | "high";
+
+export const TASK_STATUSES = [
+  { value: "todo", label: "未着手" },
+  { value: "in_progress", label: "進行中" },
+  { value: "done", label: "完了" },
+] as const;
+
+export const TASK_PRIORITIES = [
+  { value: "high", label: "高" },
+  { value: "medium", label: "中" },
+  { value: "low", label: "低" },
+] as const;
+
+export type Task = {
+  id: string;
+  title: string;
+  description: string | null;
+  project_id: string | null;
+  assigned_to: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export function taskStatusLabel(value: TaskStatus) {
+  return TASK_STATUSES.find((s) => s.value === value)?.label ?? value;
+}
+
+export function taskStatusBadgeClass(value: TaskStatus) {
+  switch (value) {
+    case "todo": return "bg-slate-100 text-slate-600";
+    case "in_progress": return "bg-amber-50 text-amber-700";
+    case "done": return "bg-emerald-50 text-emerald-700";
+    default: return "bg-slate-100 text-slate-600";
+  }
+}
+
+export function taskPriorityBadgeClass(value: TaskPriority) {
+  switch (value) {
+    case "high": return "bg-red-50 text-red-700";
+    case "medium": return "bg-yellow-50 text-yellow-700";
+    case "low": return "bg-blue-50 text-blue-600";
+    default: return "bg-slate-100 text-slate-600";
+  }
+}
+
 export type ProjectProfit = {
   project_id: string;
   code: string;
