@@ -215,8 +215,15 @@ export default async function ProjectsPage({
                 </td>
                 <td className="whitespace-nowrap px-3 py-2">
                   <Link
-                    href={`/projects/${p.id}`}
+                    href={`/invoice/${p.id}`}
                     className="text-slate-500 hover:text-slate-900"
+                    target="_blank"
+                  >
+                    請求書
+                  </Link>
+                  <Link
+                    href={`/projects/${p.id}`}
+                    className="ml-2 text-slate-500 hover:text-slate-900"
                   >
                     編集
                   </Link>
