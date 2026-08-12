@@ -5,16 +5,17 @@ import { getJapaneseHolidays } from "@/lib/holidays";
 import Link from "next/link";
 import {
   addScheduleItem,
+  updateScheduleItem,
   toggleScheduleItemDone,
   deleteScheduleItem,
   deleteSchedule,
-  updateScheduleItemAssignees,
   syncScheduleToTasks,
 } from "../actions";
 import { DeleteButton } from "../../delete-button";
 import { ScheduleItemForm } from "./schedule-item-form";
-import { AssigneeSelector } from "./assignee-selector";
+import { EditableItemRow } from "./editable-item-row";
 import { PdfButton } from "./pdf-button";
+import { SyncButton } from "./sync-button";
 
 type ScheduleWithProject = Schedule & {
   project: { code: string; client_name: string; name: string | null } | null;
@@ -235,41 +236,33 @@ export default async function ScheduleDetailPage(
         </section>
       )}
 
-      {/* BRÜSCAPE Side */}
-      <section className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
-        <h2 className="text-sm font-semibold text-blue-900">BRÜSCAPE側のタスク</h2>
-        <div className="mt-3 space-y-1.5">
-          {bruscapeItems.map((item) => (
-            <ItemRow key={item.id} item={item} scheduleId={s.id} memberMap={memberMap} members={memberList} />
+      {/* Items List */}
+      <section>
+        <h2 className="text-sm font-semibold text-slate-900">タスク一覧</h2>
+        <div className="mt-2 space-y-1.5">
+          {allItems.map((item) => (
+            <EditableItemRow
+              key={item.id}
+              item={item}
+              scheduleId={s.id}
+              members={memberList}
+              memberMap={Object.fromEntries(memberMap)}
+              updateAction={updateScheduleItem}
+              toggleAction={toggleScheduleItemDone}
+              deleteAction={deleteScheduleItem}
+            />
           ))}
-          {bruscapeItems.length === 0 && (
-            <p className="py-2 text-center text-xs text-blue-400">まだ項目がありません</p>
+          {allItems.length === 0 && (
+            <p className="py-4 text-center text-sm text-slate-400">まだ項目がありません</p>
           )}
         </div>
         <div className="mt-3">
           <ScheduleItemForm
             scheduleId={s.id}
-            side="bruscape"
-            nextOrder={bruscapeItems.length}
+            nextOrder={allItems.length}
             action={addScheduleItem}
             members={memberList}
           />
-        </div>
-      </section>
-
-      {/* Client Side */}
-      <section className="rounded-lg border-2 border-amber-200 bg-amber-50 p-4">
-        <h2 className="text-sm font-semibold text-amber-900">お客様側のタスク</h2>
-        <div className="mt-3 space-y-1.5">
-          {clientItems.map((item) => (
-            <ItemRow key={item.id} item={item} scheduleId={s.id} memberMap={memberMap} members={memberList} />
-          ))}
-          {clientItems.length === 0 && (
-            <p className="py-2 text-center text-xs text-amber-400">まだ項目がありません</p>
-          )}
-        </div>
-        <div className="mt-3">
-          <ScheduleItemForm scheduleId={s.id} side="client" nextOrder={clientItems.length} action={addScheduleItem} />
         </div>
       </section>
 
@@ -283,94 +276,9 @@ export default async function ScheduleDetailPage(
                 BRÜSCAPE側のタスクを担当者のタスク一覧に自動追加・更新します
               </p>
             </div>
-            <form action={syncScheduleToTasks}>
-              <input type="hidden" name="schedule_id" value={s.id} />
-              <button
-                type="submit"
-                className="rounded-md bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
-              >
-                スケジュールを更新する
-              </button>
-            </form>
+            <SyncButton action={syncScheduleToTasks} scheduleId={s.id} />
           </div>
         </section>
-      )}
-    </div>
-  );
-}
-
-function ItemRow({
-  item,
-  scheduleId,
-  memberMap,
-  members,
-}: {
-  item: ScheduleItem;
-  scheduleId: string;
-  memberMap: Map<string, string>;
-  members: { id: string; name: string }[];
-}) {
-  const today = new Date().toISOString().slice(0, 10);
-  const isOverdue = item.due_date && !item.is_done && item.due_date < today;
-  const assigneeNames = (item.assignee_ids ?? [])
-    .map((id) => memberMap.get(id))
-    .filter(Boolean);
-
-  return (
-    <div className={`rounded-md bg-white px-3 py-2 ${item.is_done ? "opacity-50" : ""}`}>
-      <div className="flex items-center gap-3">
-        <form action={toggleScheduleItemDone} className="shrink-0">
-          <input type="hidden" name="id" value={item.id} />
-          <input type="hidden" name="schedule_id" value={scheduleId} />
-          <input type="hidden" name="is_done" value={String(item.is_done)} />
-          <button
-            type="submit"
-            className={`flex h-5 w-5 items-center justify-center rounded border ${
-              item.is_done
-                ? "border-emerald-400 bg-emerald-100 text-emerald-600"
-                : "border-slate-300 text-transparent hover:border-slate-400"
-            }`}
-          >
-            {item.is_done && <span className="text-xs">&#10003;</span>}
-          </button>
-        </form>
-        <span className={`min-w-0 flex-1 text-sm ${item.is_done ? "text-slate-400 line-through" : "text-slate-900"}`}>
-          {item.title}
-        </span>
-        {(item.start_date || item.due_date) && (
-          <span className={`shrink-0 text-xs ${isOverdue ? "font-medium text-red-600" : "text-slate-400"}`}>
-            {item.start_date && item.due_date && item.start_date !== item.due_date
-              ? `${item.start_date} 〜 ${item.due_date}`
-              : item.due_date ?? item.start_date}
-          </span>
-        )}
-        <form action={deleteScheduleItem}>
-          <input type="hidden" name="id" value={item.id} />
-          <input type="hidden" name="schedule_id" value={scheduleId} />
-          <button type="submit" className="text-xs text-slate-400 hover:text-red-500">削除</button>
-        </form>
-      </div>
-      {item.side === "bruscape" && (
-        <div className="mt-1.5 flex items-center gap-2 pl-8">
-          {assigneeNames.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
-              {assigneeNames.map((name, i) => (
-                <span key={i} className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
-                  {name}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <span className="text-[10px] text-slate-400">担当者未設定</span>
-          )}
-          <AssigneeSelector
-            itemId={item.id}
-            scheduleId={scheduleId}
-            members={members}
-            currentIds={item.assignee_ids ?? []}
-            action={updateScheduleItemAssignees}
-          />
-        </div>
       )}
     </div>
   );

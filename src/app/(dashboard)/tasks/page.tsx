@@ -110,6 +110,11 @@ export default async function TasksPage({
     return v === "high" ? "高" : v === "medium" ? "中" : "低";
   }
 
+  function formatDate(dateStr: string) {
+    const d = new Date(dateStr + "T00:00:00");
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
   function renderTask(task: TaskWithRelations) {
     const isOverdue = task.due_date && task.status !== "done" && task.due_date < new Date().toISOString().slice(0, 10);
     const isDone = task.status === "done";
@@ -151,7 +156,7 @@ export default async function TasksPage({
           )}
           {task.due_date && (
             <span className={`shrink-0 text-xs ${isOverdue ? "font-medium text-red-600" : "text-slate-400"}`}>
-              {task.due_date}
+              〆 {formatDate(task.due_date)}
             </span>
           )}
           <div className="flex shrink-0 items-center gap-1">
@@ -230,7 +235,7 @@ export default async function TasksPage({
                     <span className="shrink-0 text-xs text-slate-400">{task.project.code}</span>
                   )}
                   {task.due_date && (
-                    <span className="shrink-0 text-xs text-slate-400">{task.due_date}</span>
+                    <span className="shrink-0 text-xs text-slate-400">〆 {formatDate(task.due_date)}</span>
                   )}
                   <form action={unpickTaskForToday}>
                     <input type="hidden" name="task_id" value={task.id} />

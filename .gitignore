@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 !.env.local.example
 
+# google credentials
+google-client-secret.json
+.google-token.json
+
 # vercel
 .vercel
 

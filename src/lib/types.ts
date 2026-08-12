@@ -153,7 +153,7 @@ export type ScheduleItem = {
   sort_order: number;
   is_done: boolean;
   assignee_ids: string[];
-  google_calendar_event_id: string | null;
+  google_event_id: string | null;
   created_at: string;
   updated_at: string;
 };

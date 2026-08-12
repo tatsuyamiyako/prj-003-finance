@@ -3,6 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  syncToGoogleCalendar,
+  deleteGoogleCalendarEvent,
+} from "@/lib/google-calendar";
 
 export async function createSchedule(formData: FormData) {
   const supabase = await createClient();
@@ -84,12 +88,21 @@ export async function updateScheduleItem(formData: FormData) {
   const id = formData.get("id") as string;
   const schedule_id = formData.get("schedule_id") as string;
   const title = formData.get("title") as string;
+  const side = formData.get("side") as string;
+  const start_date = (formData.get("start_date") as string) || null;
   const due_date = (formData.get("due_date") as string) || null;
-  const is_done = formData.get("is_done") === "true";
+  const assignee_ids = formData.getAll("assignee_ids") as string[];
 
   const { error } = await supabase
     .from("schedule_items")
-    .update({ title, due_date, is_done, updated_at: new Date().toISOString() })
+    .update({
+      title,
+      side,
+      start_date,
+      due_date,
+      assignee_ids: side === "bruscape" ? assignee_ids : [],
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath(`/schedules/${schedule_id}`);
@@ -137,6 +150,16 @@ export async function deleteScheduleItem(formData: FormData) {
   const id = formData.get("id") as string;
   const schedule_id = formData.get("schedule_id") as string;
 
+  const { data: item } = await supabase
+    .from("schedule_items")
+    .select("google_event_id")
+    .eq("id", id)
+    .single();
+
+  if (item?.google_event_id) {
+    await deleteGoogleCalendarEvent(item.google_event_id);
+  }
+
   const { error } = await supabase.from("schedule_items").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath(`/schedules/${schedule_id}`);
@@ -175,12 +198,14 @@ export async function syncScheduleToTasks(formData: FormData) {
       const key = `${item.id}__${memberId}`;
       const existingTaskId = existingMap.get(key);
 
+      const taskDueDate = item.due_date ?? item.start_date;
+
       if (existingTaskId) {
         await supabase
           .from("tasks")
           .update({
             title: item.title,
-            due_date: item.due_date,
+            due_date: taskDueDate,
             project_id: schedule.project_id,
             status: item.is_done ? "done" : "todo",
             updated_at: new Date().toISOString(),
@@ -195,7 +220,7 @@ export async function syncScheduleToTasks(formData: FormData) {
             project_id: schedule.project_id,
             assigned_to: memberId,
             schedule_item_id: item.id,
-            due_date: item.due_date,
+            due_date: taskDueDate,
             status: item.is_done ? "done" : "todo",
             priority: "medium",
           })
@@ -210,6 +235,60 @@ export async function syncScheduleToTasks(formData: FormData) {
   const toDelete = allLinkedIds.filter((id: string) => !keepTaskIds.has(id));
   if (toDelete.length > 0) {
     await supabase.from("tasks").delete().in("id", toDelete);
+  }
+
+  // Google Calendar sync
+  const { data: members } = await supabase
+    .from("members")
+    .select("id, name")
+    .eq("is_active", true);
+  const memberMap = new Map((members ?? []).map((m: { id: string; name: string }) => [m.id, m.name]));
+
+  let projectLabel: string | null = null;
+  if (schedule.project_id) {
+    const { data: proj } = await supabase
+      .from("projects")
+      .select("code, client_name")
+      .eq("id", schedule.project_id)
+      .single();
+    if (proj) projectLabel = `${proj.code} — ${proj.client_name}`;
+  }
+
+  const syncItems = items.map((item: {
+    id: string; title: string; side: string;
+    start_date: string | null; due_date: string | null;
+    is_done: boolean; google_event_id: string | null;
+    assignee_ids: string[];
+  }) => ({
+    id: item.id,
+    title: item.title,
+    side: item.side,
+    start_date: item.start_date,
+    due_date: item.due_date,
+    is_done: item.is_done,
+    google_event_id: item.google_event_id ?? null,
+    assignee_names: (item.assignee_ids ?? [])
+      .map((id: string) => memberMap.get(id))
+      .filter(Boolean) as string[],
+    project_label: projectLabel,
+  }));
+
+  const calendarResults = await syncToGoogleCalendar(syncItems);
+  for (const { itemId, eventId } of calendarResults) {
+    await supabase
+      .from("schedule_items")
+      .update({ google_event_id: eventId })
+      .eq("id", itemId);
+  }
+
+  // Delete calendar events for removed items
+  const currentItemIds = new Set(items.map((i: { id: string }) => i.id));
+  const deletedItems = items.filter(
+    (i: { id: string; google_event_id: string | null }) =>
+      !currentItemIds.has(i.id) && i.google_event_id
+  );
+  for (const item of deletedItems) {
+    await deleteGoogleCalendarEvent(item.google_event_id);
   }
 
   revalidatePath(`/schedules/${schedule_id}`);
