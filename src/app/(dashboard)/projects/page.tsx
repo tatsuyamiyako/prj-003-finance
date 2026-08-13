@@ -15,9 +15,9 @@ import { DeleteButton } from "../delete-button";
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; client?: string; invoice?: string; code?: string; revenue_month?: string; payment_month?: string }>;
+  searchParams: Promise<{ status?: string; client?: string; invoice?: string; code?: string; revenue_month?: string; payment_month?: string; sort?: string }>;
 }) {
-  const { status, client, invoice, code, revenue_month, payment_month } = await searchParams;
+  const { status, client, invoice, code, revenue_month, payment_month, sort } = await searchParams;
   const supabase = await createClient();
 
   let query = supabase
@@ -54,6 +54,35 @@ export default async function ProjectsPage({
   ];
 
   const hasFilter = !!(status || client || invoice || code || revenue_month || payment_month);
+
+  const STATUS_ORDER: Record<string, number> = {
+    in_progress: 0,
+    won: 1,
+    delivered: 2,
+    paid: 3,
+    lost: 4,
+  };
+
+  let sorted = [...(projects ?? [])] as Project[];
+  if (sort === "code_asc") {
+    sorted.sort((a, b) => a.code.localeCompare(b.code));
+  } else if (sort === "code_desc") {
+    sorted.sort((a, b) => b.code.localeCompare(a.code));
+  } else if (sort === "status_active") {
+    sorted.sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99) || a.code.localeCompare(b.code));
+  }
+
+  function sortUrl(newSort: string) {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (client) params.set("client", client);
+    if (invoice) params.set("invoice", invoice);
+    if (code) params.set("code", code);
+    if (revenue_month) params.set("revenue_month", revenue_month);
+    if (payment_month) params.set("payment_month", payment_month);
+    params.set("sort", newSort);
+    return `/projects?${params.toString()}`;
+  }
 
   return (
     <div>
@@ -170,10 +199,18 @@ export default async function ProjectsPage({
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs font-medium text-slate-500">
-              <th className="px-3 py-2">コード</th>
+              <th className="px-3 py-2">
+                <Link href={sortUrl(sort === "code_asc" ? "code_desc" : "code_asc")} className="hover:text-slate-900">
+                  コード {sort === "code_asc" ? "▲" : sort === "code_desc" ? "▼" : ""}
+                </Link>
+              </th>
               <th className="px-3 py-2">案件名</th>
               <th className="px-3 py-2">クライアント</th>
-              <th className="px-3 py-2">ステータス</th>
+              <th className="px-3 py-2">
+                <Link href={sortUrl(sort === "status_active" ? "" : "status_active")} className="hover:text-slate-900">
+                  ステータス {sort === "status_active" ? "▲" : ""}
+                </Link>
+              </th>
               <th className="px-3 py-2 text-right">売上(税抜)</th>
               <th className="px-3 py-2">売上月</th>
               <th className="px-3 py-2">入金月</th>
@@ -183,7 +220,7 @@ export default async function ProjectsPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {(projects ?? []).map((p: Project) => (
+            {sorted.map((p: Project) => (
               <tr key={p.id} className="hover:bg-slate-50">
                 <td className="whitespace-nowrap px-3 py-2 font-medium text-slate-900">
                   <Link href={`/projects/${p.id}`} className="hover:underline">
@@ -236,7 +273,7 @@ export default async function ProjectsPage({
                 </td>
               </tr>
             ))}
-            {(projects ?? []).length === 0 && (
+            {sorted.length === 0 && (
               <tr>
                 <td colSpan={10} className="px-3 py-8 text-center text-slate-400">
                   該当する案件がありません。
