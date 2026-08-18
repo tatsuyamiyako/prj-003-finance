@@ -212,6 +212,7 @@ export default async function ProjectsPage({
                 </Link>
               </th>
               <th className="px-3 py-2 text-right">売上(税抜)</th>
+              <th className="px-3 py-2 text-right">最終売上</th>
               <th className="px-3 py-2">売上月</th>
               <th className="px-3 py-2">入金月</th>
               <th className="px-3 py-2">請求書</th>
@@ -239,6 +240,9 @@ export default async function ProjectsPage({
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-right text-slate-700">
                   {formatYen(p.revenue_excl_tax)}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2 text-right text-slate-700">
+                  {p.final_revenue ? formatYen(p.final_revenue) : "—"}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-slate-500">
                   {p.revenue_month?.slice(0, 7) ?? "—"}
@@ -292,7 +296,7 @@ export default async function ProjectsPage({
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-3 py-8 text-center text-slate-400">
+                <td colSpan={12} className="px-3 py-8 text-center text-slate-400">
                   該当する案件がありません。
                 </td>
               </tr>

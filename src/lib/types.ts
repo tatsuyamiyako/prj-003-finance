@@ -49,6 +49,7 @@ export type Project = {
   summary: string | null;
   revenue_excl_tax: number;
   revenue_incl_tax: number;
+  final_revenue: number;
   revenue_month: string | null;
   payment_month: string | null;
   status: ProjectStatus;

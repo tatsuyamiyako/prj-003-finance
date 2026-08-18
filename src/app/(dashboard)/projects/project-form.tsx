@@ -69,9 +69,10 @@ export function ProjectForm({ businesses, members, project, nextCodeNumber, acti
 
       <Field label="案件概要" name="summary" defaultValue={project?.summary ?? ""} textarea />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Field label="売上（税抜）" name="revenue_excl_tax" type="number" defaultValue={project?.revenue_excl_tax ?? 0} />
         <Field label="売上（税込）" name="revenue_incl_tax" type="number" defaultValue={project?.revenue_incl_tax ?? 0} />
+        <Field label="最終売上" name="final_revenue" type="number" defaultValue={project?.final_revenue ?? 0} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
