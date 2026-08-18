@@ -9,7 +9,7 @@ import {
   type ProjectStatus,
   clientLabel,
 } from "@/lib/types";
-import { deleteProject } from "./actions";
+import { deleteProject, toggleSplitDone } from "./actions";
 import { DeleteButton } from "../delete-button";
 
 export default async function ProjectsPage({
@@ -216,6 +216,7 @@ export default async function ProjectsPage({
               <th className="px-3 py-2">入金月</th>
               <th className="px-3 py-2">請求書</th>
               <th className="px-3 py-2">着金</th>
+              <th className="px-3 py-2">分配</th>
               <th className="px-3 py-2">操作</th>
             </tr>
           </thead>
@@ -251,6 +252,22 @@ export default async function ProjectsPage({
                 <td className="px-3 py-2 text-slate-500">
                   {p.payment_status === "paid" ? "済" : "未"}
                 </td>
+                <td className="px-3 py-2 text-center">
+                  <form action={toggleSplitDone}>
+                    <input type="hidden" name="id" value={p.id} />
+                    <input type="hidden" name="is_split_done" value={String(p.is_split_done)} />
+                    <button
+                      type="submit"
+                      className={`inline-flex h-5 w-5 items-center justify-center rounded border ${
+                        p.is_split_done
+                          ? "border-emerald-500 bg-emerald-500 text-white"
+                          : "border-slate-300 text-transparent hover:border-slate-400"
+                      }`}
+                    >
+                      {p.is_split_done ? "✓" : ""}
+                    </button>
+                  </form>
+                </td>
                 <td className="whitespace-nowrap px-3 py-2">
                   <Link
                     href={`/invoice/${p.id}`}
@@ -275,7 +292,7 @@ export default async function ProjectsPage({
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-slate-400">
+                <td colSpan={11} className="px-3 py-8 text-center text-slate-400">
                   該当する案件がありません。
                 </td>
               </tr>

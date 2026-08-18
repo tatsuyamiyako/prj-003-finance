@@ -95,6 +95,23 @@ export async function updateProject(
   redirect("/projects");
 }
 
+export async function toggleSplitDone(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = formData.get("id") as string;
+  const current = formData.get("is_split_done") === "true";
+  const { error } = await supabase
+    .from("projects")
+    .update({ is_split_done: !current })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/projects");
+}
+
 export async function deleteProject(formData: FormData) {
   const supabase = await createClient();
   const {

@@ -57,6 +57,7 @@ export type Project = {
   next_action: string | null;
   notes: string | null;
   split_member_ids: string[] | null;
+  is_split_done: boolean;
   needs_review: boolean;
 };
 
