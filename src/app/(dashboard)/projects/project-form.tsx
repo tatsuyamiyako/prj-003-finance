@@ -20,6 +20,8 @@ export function ProjectForm({ businesses, members, project, nextCodeNumber, acti
   const initialSplitIds = project?.split_member_ids ?? allIds;
   const [splitIds, setSplitIds] = useState<string[]>(initialSplitIds);
   const allSelected = splitIds.length === settlementMembers.length;
+  const [exclTax, setExclTax] = useState(project?.revenue_excl_tax ?? 0);
+  const [inclTax, setInclTax] = useState(project?.revenue_incl_tax ?? 0);
   return (
     <form action={formAction} className="max-w-2xl space-y-4">
       {state?.error && (
@@ -70,8 +72,34 @@ export function ProjectForm({ businesses, members, project, nextCodeNumber, acti
       <Field label="案件概要" name="summary" defaultValue={project?.summary ?? ""} textarea />
 
       <div className="grid grid-cols-3 gap-4">
-        <Field label="売上（税抜）" name="revenue_excl_tax" type="number" defaultValue={project?.revenue_excl_tax ?? 0} />
-        <Field label="売上（税込）" name="revenue_incl_tax" type="number" defaultValue={project?.revenue_incl_tax ?? 0} />
+        <div>
+          <label className="block text-sm font-medium text-slate-700">売上（税抜）</label>
+          <input
+            type="number"
+            name="revenue_excl_tax"
+            value={exclTax}
+            onChange={(e) => {
+              const v = Number(e.target.value) || 0;
+              setExclTax(v);
+              setInclTax(Math.round(v * 1.1));
+            }}
+            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700">売上（税込）</label>
+          <input
+            type="number"
+            name="revenue_incl_tax"
+            value={inclTax}
+            onChange={(e) => {
+              const v = Number(e.target.value) || 0;
+              setInclTax(v);
+              setExclTax(Math.round(v / 1.1));
+            }}
+            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900"
+          />
+        </div>
         <Field label="最終売上" name="final_revenue" type="number" defaultValue={project?.final_revenue ?? 0} />
       </div>
 
