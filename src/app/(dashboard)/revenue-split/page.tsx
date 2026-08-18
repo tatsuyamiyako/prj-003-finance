@@ -7,6 +7,7 @@ type Project = {
   name: string | null;
   client_name: string;
   revenue_excl_tax: number;
+  revenue_incl_tax: number;
   payment_month: string | null;
   split_member_ids: string[] | null;
 };
@@ -35,10 +36,10 @@ export default async function RevenueSplitPage({
   const [{ data: projects }, { data: members }] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, code, name, client_name, revenue_excl_tax, payment_month, split_member_ids")
+      .select("id, code, name, client_name, revenue_excl_tax, revenue_incl_tax, payment_month, split_member_ids")
       .not("payment_month", "is", null)
       .neq("status", "lost")
-      .gt("revenue_excl_tax", 0)
+      .gt("revenue_incl_tax", 0)
       .order("payment_month", { ascending: false }),
     supabase
       .from("members")
@@ -69,7 +70,7 @@ export default async function RevenueSplitPage({
     const splitIds = p.split_member_ids && p.split_member_ids.length > 0
       ? p.split_member_ids
       : settlementIds;
-    const share = splitIds.length > 0 ? Math.round(p.revenue_excl_tax / splitIds.length) : 0;
+    const share = splitIds.length > 0 ? Math.round(p.revenue_incl_tax / splitIds.length) : 0;
 
     if (!revenueByMonth.has(pm)) revenueByMonth.set(pm, new Map());
     const monthMap = revenueByMonth.get(pm)!;
